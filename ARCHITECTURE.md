@@ -13,7 +13,7 @@
 ## 目标模块
 
 ```text
-Tkinter desktop UI
+Qt desktop UI
   -> application service
   -> input and archive validation
   -> OOXML adapter (DOCX | PPTX | XLSX)
@@ -32,7 +32,7 @@ Tkinter desktop UI
 ## 实际技术栈
 
 - Python 3.12：解析、转换核心、文件安全与桌面运行时。
-- Tkinter（Python 标准库）：Windows 原生文件和目录选择、状态与错误入口。
+- `PySide6-Essentials 6.11.2`：Qt Windows 原生文件和目录选择、状态与错误入口；可由 PyInstaller 随应用分发。
 - `python-docx 1.2.0`、`python-pptx 1.0.2`、`openpyxl 3.1.5`：三类 OOXML 输入适配器。
 - PyInstaller 6.22.2：生成 Windows 分发目录。
 

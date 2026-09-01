@@ -15,6 +15,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- 将桌面 UI 从无法由当前环境打包的 Tkinter 替换为 `PySide6-Essentials`，修复 Windows 分发应用启动时的相对导入和 Tcl/Tk 运行时缺失问题。
+
 ### Added
 
 - 技术路线、风险优先实施计划与任务清单。

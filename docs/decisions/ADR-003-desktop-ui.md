@@ -14,7 +14,7 @@ Accepted
 
 ## Decision
 
-采用 Python 标准库 Tkinter 构建 Windows 原生界面，UI 直接调用应用服务。核心不依赖 Tkinter，未来可以替换 UI 宿主。
+采用 `PySide6-Essentials` 构建 Windows Qt 原生界面，UI 直接调用应用服务。核心不依赖具体 UI 框架，未来可以替换 UI 宿主。
 
 ## Alternatives Considered
 
@@ -30,14 +30,14 @@ Accepted
 - 缺点：Rust、TypeScript 与 Python 多运行时组合超出 MVP 的必要复杂度。
 - 结论：以后评估。
 
-### PySide6
+### Tkinter
 
-- 优点：组件和视觉能力更强。
-- 缺点：当前环境下载其运行时多次中断，且 MVP 不需要高级控件。
-- 结论：当前拒绝；核心稳定后可重新评估。
+- 优点：Python 标准库，应用代码依赖小。
+- 缺点：当前 Python 环境没有可用 Tcl/Tk 资源，PyInstaller 会将它排除，导致分发产物无法启动。
+- 结论：拒绝作为当前分发方案。
 
 ## Consequences
 
 - Windows 成为 MVP 的明确目标平台。
-- Tkinter 和候选解析库的打包、启动已验证；高级可访问性与视觉定制留待后续版本。
+- Qt Essentials 和候选解析库须随每次发布执行 PyInstaller 构建与启动验证；高级可访问性与视觉定制留待后续版本。
 - 浏览器 UI 只能作为未来替代宿主，不能改变核心合同。

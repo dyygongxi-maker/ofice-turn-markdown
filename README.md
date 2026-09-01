@@ -32,4 +32,4 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1
 
 自动化测试覆盖基础 DOCX、PPTX、XLSX、公式缓存警告、格式伪装、宏包拒绝和输出冲突。复杂版式仍应使用真实或脱敏样本补充回归验证。
 
-样本合同与当前状态见 [样本基准](tests/fixtures/README.md) 和 [验证日志](docs/sample-validation-log.md)。项目尚未创建自己的 Python 环境。
+样本合同与当前状态见 [样本基准](tests/fixtures/README.md) 和 [验证日志](docs/sample-validation-log.md)。项目已包含独立 `.venv`；依赖声明见 `pyproject.toml`，当前验证版本见 `requirements.lock`。

@@ -17,6 +17,18 @@ def test_rejects_non_office_input(tmp_path: Path) -> None:
         ConversionService().convert(source, tmp_path)
 
 
+def test_pyinstaller_entrypoint_uses_an_absolute_package_import() -> None:
+    launcher = Path("src/launcher.py").read_text(encoding="utf-8")
+    assert "from office_to_markdown.app import main" in launcher
+    assert "from .app import main" not in launcher
+
+
+def test_desktop_ui_uses_packageable_qt_runtime() -> None:
+    app_module = Path("src/office_to_markdown/app.py").read_text(encoding="utf-8")
+    assert "from PySide6.QtWidgets import" in app_module
+    assert "import tkinter" not in app_module
+
+
 def test_rejects_extension_content_mismatch_and_macros(tmp_path: Path) -> None:
     mismatch = tmp_path / "not-a-document.docx"
     with zipfile.ZipFile(mismatch, "w") as archive:
