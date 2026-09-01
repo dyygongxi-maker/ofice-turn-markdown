@@ -1,8 +1,9 @@
-# Office to Markdown
+# 廾匸转换
 
 ## 项目概述
 
 - 编号：003
+- 曾用显示名：Office to Markdown
 - 状态：产品设计
 - 目标用户：初期为个人用户；产品稳定后可面向公众。
 - 核心目标：在 Windows 本机将 DOCX、PPTX、XLSX 转换为适合知识库归档和 AI 阅读的 Markdown。

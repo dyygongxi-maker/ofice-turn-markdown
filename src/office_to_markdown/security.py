@@ -27,32 +27,32 @@ def safe_name(value: str, fallback: str = "document") -> str:
 
 def validate_input(source: Path) -> None:
     if not source.is_file():
-        raise ValidationError("The selected file does not exist.")
+        raise ValidationError("所选文件不存在。")
     if source.suffix.lower() not in ALLOWED_SUFFIXES:
-        raise ValidationError("Only DOCX, PPTX, and XLSX files are supported.")
+        raise ValidationError("仅支持 DOCX、PPTX 和 XLSX 文件。")
     if source.stat().st_size > MAX_COMPRESSED_BYTES:
-        raise ValidationError("The selected file exceeds the configured size limit.")
+        raise ValidationError("所选文件超过配置的大小限制。")
     try:
         with zipfile.ZipFile(source) as archive:
             entries = archive.infolist()
             if len(entries) > MAX_ARCHIVE_ENTRIES:
-                raise ValidationError("The Office package contains too many entries.")
+                raise ValidationError("Office 文件包包含过多条目。")
             total_size = sum(item.file_size for item in entries)
             if total_size > MAX_EXPANDED_BYTES:
-                raise ValidationError("The Office package expands beyond the configured limit.")
+                raise ValidationError("Office 文件包解压后超过配置的大小限制。")
             names = {item.filename for item in entries}
             if "[Content_Types].xml" not in names:
-                raise ValidationError("The selected file is not a valid OOXML package.")
+                raise ValidationError("所选文件不是有效的 OOXML 文件包。")
             if REQUIRED_PARTS[source.suffix.lower()] not in names:
-                raise ValidationError("The file content does not match its Office extension.")
+                raise ValidationError("文件内容与其 Office 扩展名不匹配。")
             if any(name.startswith(("/", "\\")) or ".." in Path(name).parts for name in names):
-                raise ValidationError("The Office package contains an unsafe archive path.")
+                raise ValidationError("Office 文件包包含不安全的压缩路径。")
             if any(name.lower().endswith("vbaproject.bin") for name in names):
-                raise ValidationError("Macro-enabled content is not accepted.")
+                raise ValidationError("不接受包含宏的文件。")
     except zipfile.BadZipFile as error:
-        raise ValidationError("The selected file is not a readable OOXML package.") from error
+        raise ValidationError("所选文件不是可读取的 OOXML 文件包。") from error
 
 
 def ensure_output_parent(path: Path) -> None:
     if not path.is_dir():
-        raise ValidationError("Choose an existing output folder.")
+        raise ValidationError("请选择一个已存在的输出目录。")

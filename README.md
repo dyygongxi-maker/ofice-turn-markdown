@@ -1,6 +1,6 @@
-# Office to Markdown
+# 廾匸转换
 
-在 Windows 本机将 Word、PowerPoint 和 Excel 的标准 OOXML 文件转换为知识库与 AI 可读的 Markdown。
+在 Windows 本机将 Word、PowerPoint 和 Excel 的标准 OOXML 文件转换为适合知识库与 AI 阅读的 Markdown。
 
 项目提供本地 Windows MVP；文件不会上传到网络。
 

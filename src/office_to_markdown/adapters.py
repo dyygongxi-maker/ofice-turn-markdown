@@ -51,7 +51,7 @@ def parse_docx(source: Path) -> ParsedDocument:
     warnings = []
     if document.inline_shapes and not assets:
         warnings.append(
-            WarningItem("DOCX_IMAGE_EXPORT_FAILED", "An inline image could not be exported.")
+            WarningItem("DOCX_IMAGE_EXPORT_FAILED", "有一张内嵌图片未能导出。")
         )
     return ParsedDocument(title, "docx", blocks, assets=assets, warnings=warnings)
 
@@ -93,14 +93,14 @@ def parse_pptx(source: Path) -> ParsedDocument:
                 document.warnings.append(
                     WarningItem(
                         "PPTX_OBJECT_UNSUPPORTED",
-                        "A chart or embedded object was skipped.",
-                        f"slide {number}",
+                        "图表或嵌入对象已跳过。",
+                        f"第 {number} 页",
                     )
                 )
         try:
             notes = slide.notes_slide.notes_text_frame.text.strip()
             if notes:
-                document.blocks.extend([Block("heading", "Notes", 3), Block("paragraph", notes)])
+                document.blocks.extend([Block("heading", "备注", 3), Block("paragraph", notes)])
         except AttributeError:
             pass
     return document
@@ -132,19 +132,19 @@ def parse_xlsx(source: Path) -> ParsedDocument:
             document.warnings.append(
                 WarningItem(
                     "XLSX_MERGED_CELLS_FLATTENED",
-                    "Merged cells are exported as ordinary cells.",
+                    "合并单元格已按普通单元格导出。",
                     sheet.title,
                 )
             )
         if sheet._charts:
             document.warnings.append(
-                WarningItem("XLSX_CHART_UNSUPPORTED", "Charts are not exported.", sheet.title)
+                WarningItem("XLSX_CHART_UNSUPPORTED", "图表未导出。", sheet.title)
             )
         if has_formula_without_cache:
             document.warnings.append(
                 WarningItem(
                     "XLSX_FORMULA_CACHE_UNAVAILABLE",
-                    "A formula has no cached display value.",
+                    "公式没有可用的缓存显示值。",
                     sheet.title,
                 )
             )

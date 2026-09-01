@@ -14,7 +14,7 @@ def render_blocks(blocks: list[Block], asset_prefix: str = "assets") -> str:
         if block.kind == "heading":
             lines.extend(["#" * max(1, min(6, block.level or 1)) + " " + block.text.strip(), ""])
         elif block.kind == "slide":
-            lines.extend([f"## Slide {block.text}", ""])
+            lines.extend([f"## 第 {block.text} 页", ""])
         elif block.kind == "paragraph":
             lines.extend([block.text.strip(), ""])
         elif block.kind == "quote":
@@ -40,33 +40,33 @@ def render_blocks(blocks: list[Block], asset_prefix: str = "assets") -> str:
 
 
 def render_index(document: ParsedDocument) -> str:
-    lines = [f"# {document.title}", "", f"Source format: `{document.format.upper()}`", ""]
+    lines = [f"# {document.title}", "", f"源文件格式：`{document.format.upper()}`", ""]
     if document.format == "xlsx":
-        lines.extend(["## Sheets", ""])
+        lines.extend(["## 工作表", ""])
         for sheet_name in document.sheets:
             lines.append(f"- [{sheet_name}](sheets/{safe_name(sheet_name)}.md)")
     else:
         content = "content.md" if document.format == "docx" else "slides.md"
-        lines.append(f"- [Converted content]({content})")
-    lines.extend(["", "- [Conversion report](conversion-report.md)", ""])
+        lines.append(f"- [转换内容]({content})")
+    lines.extend(["", "- [转换报告](conversion-report.md)", ""])
     return "\n".join(lines)
 
 
 def render_report(document: ParsedDocument) -> str:
     lines = [
-        "# Conversion report",
+        "# 转换报告",
         "",
-        f"- Source format: `{document.format.upper()}`",
-        f"- Exported assets: {len(document.assets)}",
+        f"- 源文件格式：`{document.format.upper()}`",
+        f"- 导出资源数量：{len(document.assets)}",
         "",
     ]
     if document.warnings:
-        lines.extend(["## Warnings", ""])
+        lines.extend(["## 警告", ""])
         for warning in document.warnings:
             location = f" ({warning.location})" if warning.location else ""
             lines.append(f"- `{warning.code}`{location}: {warning.message}")
     else:
-        lines.extend(["## Warnings", "", "No conversion warnings were emitted."])
+        lines.extend(["## 警告", "", "本次转换未产生警告。"])
     return "\n".join(lines) + "\n"
 
 

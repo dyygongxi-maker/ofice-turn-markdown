@@ -15,6 +15,11 @@
 
 ## [Unreleased]
 
+### Changed
+
+- 产品显示名称调整为“廾匸转换”；桌面界面、校验提示、转换输出和正式文档改为中文。
+- Windows 分发文件名调整为 `廾匸转换.exe`；内部 Python 包名、输出文件名和 JSON 字段保持稳定。
+
 ### Fixed
 
 - 将桌面 UI 从无法由当前环境打包的 Tkinter 替换为 `PySide6-Essentials`，修复 Windows 分发应用启动时的相对导入和 Tcl/Tk 运行时缺失问题。

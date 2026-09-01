@@ -19,7 +19,7 @@ class ConversionService:
         final_path = output_parent / f"{safe_name(source.stem)}-markdown"
         if final_path.exists():
             raise ValidationError(
-                "The output folder already exists. Choose another folder or rename the source."
+                "输出目录已存在。请选择其他输出目录，或重命名源文件后再试。"
             )
         staging = Path(tempfile.mkdtemp(prefix=f".{safe_name(source.stem)}-", dir=output_parent))
         try:

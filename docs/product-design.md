@@ -1,4 +1,4 @@
-# 产品设计：Office to Markdown
+# 产品设计：廾匸转换
 
 **状态：** 已确认，样本可行性验证进行中
 
@@ -7,7 +7,7 @@
 
 ## 1. 产品摘要
 
-Office to Markdown 是一个 Windows 本地工具。用户把 WPS 或 Microsoft Office 创建的标准 `.docx`、`.pptx`、`.xlsx` 文件拖入工具，选择输出目录，即可得到适合 Obsidian、文件系统知识库和 AI 上下文使用的 Markdown、图片资源和转换报告。
+廾匸转换是一个 Windows 本地工具。用户把 WPS 或 Microsoft Office 创建的标准 `.docx`、`.pptx`、`.xlsx` 文件拖入工具，选择输出目录，即可得到适合 Obsidian、文件系统知识库和 AI 上下文使用的 Markdown、图片资源和转换报告。
 
 产品承诺的是“内容与结构可用”，不是“视觉版式无损复刻”。这是 Markdown 的能力边界，也是本项目避免误导用户的基本原则。
 
