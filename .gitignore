@@ -1,0 +1,25 @@
+# Local configuration and credentials
+.env
+
+# Python and Node environments
+.venv/
+venv/
+node_modules/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Local inputs, conversion outputs, and temporary files
+inputs/
+outputs/*
+!outputs/.gitkeep
+work/*
+!work/.gitkeep
+build/
+dist/
+*.spec
+
+# Editor and OS files
+.DS_Store
+Thumbs.db

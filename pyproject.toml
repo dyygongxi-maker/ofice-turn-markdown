@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "office-to-markdown"
+version = "0.1.0"
+description = "Local Windows Office OOXML to Markdown converter"
+requires-python = ">=3.12"
+dependencies = [
+  "defusedxml>=0.7,<1",
+  "openpyxl>=3.1,<4",
+  "python-docx>=1.2,<2",
+  "python-pptx>=1.0,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+  "ruff>=0.8,<1",
+]
+
+[project.scripts]
+office-to-markdown = "office_to_markdown.app:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

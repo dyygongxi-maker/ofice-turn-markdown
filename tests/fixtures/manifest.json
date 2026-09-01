@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "purpose": "synthetic-or-sanitized-ooxml-conversion-baseline",
+  "fixtures": [
+    {
+      "id": "docx-basic",
+      "format": "docx",
+      "status": "planned",
+      "required": ["title", "paragraph", "heading"],
+      "allowed_warnings": []
+    },
+    {
+      "id": "docx-structured",
+      "format": "docx",
+      "status": "planned",
+      "required": ["heading", "ordered-list", "unordered-list", "quote", "hyperlink", "table"],
+      "allowed_warnings": []
+    },
+    {
+      "id": "docx-assets",
+      "format": "docx",
+      "status": "planned",
+      "required": ["image", "caption", "table"],
+      "allowed_warnings": ["DOCX_UNRECOGNIZED_STYLE"]
+    },
+    {
+      "id": "docx-unsupported",
+      "format": "docx",
+      "status": "planned",
+      "required": ["paragraph"],
+      "allowed_warnings": ["DOCX_FLOATING_OBJECT_UNSUPPORTED"]
+    },
+    {
+      "id": "pptx-basic",
+      "format": "pptx",
+      "status": "planned",
+      "required": ["slide-separator", "title", "paragraph"],
+      "allowed_warnings": []
+    },
+    {
+      "id": "pptx-structured",
+      "format": "pptx",
+      "status": "planned",
+      "required": ["slide-separator", "title", "unordered-list", "table", "image"],
+      "allowed_warnings": []
+    },
+    {
+      "id": "pptx-notes-and-order",
+      "format": "pptx",
+      "status": "planned",
+      "required": ["speaker-notes", "paragraph"],
+      "allowed_warnings": ["PPTX_READING_ORDER_AMBIGUOUS"]
+    },
+    {
+      "id": "pptx-unsupported",
+      "format": "pptx",
+      "status": "planned",
+      "required": ["title"],
+      "allowed_warnings": ["PPTX_EMBEDDED_OBJECT_UNSUPPORTED"]
+    },
+    {
+      "id": "xlsx-basic",
+      "format": "xlsx",
+      "status": "planned",
+      "required": ["workbook-index", "sheet", "table"],
+      "allowed_warnings": []
+    },
+    {
+      "id": "xlsx-formulas",
+      "format": "xlsx",
+      "status": "planned",
+      "required": ["sheet", "formula"],
+      "allowed_warnings": ["XLSX_FORMULA_CACHE_UNAVAILABLE"]
+    },
+    {
+      "id": "xlsx-layout",
+      "format": "xlsx",
+      "status": "planned",
+      "required": ["sheet", "table"],
+      "allowed_warnings": ["XLSX_MERGED_CELLS_FLATTENED"]
+    },
+    {
+      "id": "xlsx-unsupported",
+      "format": "xlsx",
+      "status": "planned",
+      "required": ["sheet"],
+      "allowed_warnings": ["XLSX_CHART_UNSUPPORTED"]
+    }
+  ]
+}
