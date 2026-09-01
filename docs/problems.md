@@ -35,3 +35,10 @@
 - 根因：PyInstaller 检测到当前 Python 环境的 Tcl/Tk 安装损坏并排除 `tkinter`，而桌面应用在启动时导入它；此外，直接以包内 `__main__.py` 作为入口会失去相对导入上下文。
 - 处理：新增顶层绝对导入启动器，并将 UI 宿主替换为可随应用分发的 `PySide6-Essentials`；核心转换层保持无 UI 依赖。
 - 预防：每次变更桌面运行时或入口后，必须等待 PyInstaller 的 `Build complete!` 与 `COLLECT` 阶段结束，再检查新 exe 时间戳、警告文件和实际启动结果；不得把错误对话框仍在显示时的进程存活误判为启动成功。
+
+## PR-006：Qt 绑定 DLL 的目录布局不满足 Windows 加载器
+
+- 状态：已解决，干净 Windows 分发产物已验证启动。
+- 根因：PyInstaller 默认将 `shiboken6.abi3.dll` 放入 `_internal\\shiboken6`，但 `PySide6\\pyside6.abi3.dll` 由 Windows 加载器加载时只会在其自身目录及已注册目录中查找依赖，因而无法解析该 DLL，导致 `QtWidgets` 导入失败。
+- 处理：构建脚本显式将 `shiboken6.abi3.dll` 作为二进制文件收集到 `_internal\\PySide6`；增加回归测试验证此打包规则。
+- 预防：所有含原生扩展的桌面依赖都要检查直接 DLL 依赖与最终目录布局，且必须从干净 `dist` 目录启动验证。
