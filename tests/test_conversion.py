@@ -23,16 +23,17 @@ def test_pyinstaller_entrypoint_uses_an_absolute_package_import() -> None:
     assert "from .app import main" not in launcher
 
 
-def test_pyinstaller_collects_the_shiboken_runtime_next_to_pyside() -> None:
+def test_pyinstaller_uses_the_tkinter_build_environment() -> None:
     build_script = Path("scripts/build.ps1").read_text(encoding="utf-8")
-    assert "shiboken6.abi3.dll" in build_script
-    assert ";PySide6" in build_script
+    assert ".venv-tk" in build_script
+    assert "PyInstaller" in build_script
+    assert "shiboken6" not in build_script
 
 
-def test_desktop_ui_uses_packageable_qt_runtime() -> None:
+def test_desktop_ui_uses_tkinter() -> None:
     app_module = Path("src/office_to_markdown/app.py").read_text(encoding="utf-8")
-    assert "from PySide6.QtWidgets import" in app_module
-    assert "import tkinter" not in app_module
+    assert "import tkinter as tk" in app_module
+    assert "from PySide6.QtWidgets import" not in app_module
 
 
 def test_rejects_extension_content_mismatch_and_macros(tmp_path: Path) -> None:

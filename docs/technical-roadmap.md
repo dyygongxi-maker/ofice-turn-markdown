@@ -5,7 +5,7 @@
 
 ## 1. 路线结论
 
-推荐以 **Python 转换核心 + PySide6-Essentials Windows 原生桌面 UI** 构建 MVP。该选择直接满足纯本地运行、可靠的文件/目录选择和未来 Windows 分发需求，同时使解析与 UI 维持明确边界。
+推荐以 **Python 转换核心 + Tkinter Windows 原生桌面 UI** 构建 MVP。构建环境固定使用含 Tcl/Tk 的 Python 3.13，以满足纯本地运行、可靠的文件/目录选择和 Windows 分发需求，同时使解析与 UI 维持明确边界。
 
 MVP 不建立云端、数据库或 HTTP API。转换记录只存在于当前进程和用户选择的输出目录中。
 
@@ -13,7 +13,7 @@ MVP 不建立云端、数据库或 HTTP API。转换记录只存在于当前进�
 
 | 方案 | 优点 | 缺点 | 结论 |
 | --- | --- | --- | --- |
-| Python + PySide6-Essentials | 可随应用分发的 Qt Widgets、原生文件选择；适合离线与打包 | 增加约 77 MB 运行时 | 推荐 |
+| Python + Tkinter（完整 Tcl/Tk） | 标准库、原生文件选择；PyInstaller 可收集 Tcl/Tk 资源 | 构建机必须使用完整 Python 安装 | 推荐 |
 | FastAPI + 浏览器 UI | Web UI 开发快；未来 Web 服务可复用 | 输出目录写入受浏览器限制；多运行时 | 不适合当前流程 |
 | Tauri + Web UI + Python sidecar | 现代桌面体验；未来跨平台潜力 | 双语言、进程通信和打包复杂度高 | 未来重新评估 |
 
@@ -21,8 +21,8 @@ MVP 不建立云端、数据库或 HTTP API。转换记录只存在于当前进�
 
 | 层 | 候选 | 职责 |
 | --- | --- | --- |
-| 运行时 | Python 3.12 | 转换核心、文件操作、桌面运行时 |
-| 桌面 UI | `PySide6-Essentials` | 文件/目录选择、结果与错误展示 |
+| 运行时 | Python 3.13.9 | 转换核心、文件操作、桌面运行时 |
+| 桌面 UI | Tkinter（标准库） | 文件/目录选择、结果与错误展示 |
 | DOCX 适配器 | `python-docx` | 文本、段落、表格、图片和关系提取 |
 | PPTX 适配器 | `python-pptx` | 幻灯片、形状、表格、图片与备注提取 |
 | XLSX 适配器 | `openpyxl` | 工作表、单元格、合并区域和公式文本提取 |

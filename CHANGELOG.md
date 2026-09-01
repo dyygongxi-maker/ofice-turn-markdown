@@ -19,6 +19,7 @@
 
 - 将桌面 UI 从无法由当前环境打包的 Tkinter 替换为 `PySide6-Essentials`，修复 Windows 分发应用启动时的相对导入和 Tcl/Tk 运行时缺失问题。
 - 将 `shiboken6.abi3.dll` 收集到 `PySide6` 目录，修复 Windows 分发应用加载 `QtWidgets` 时的 DLL 解析失败。
+- 放弃不稳定的 Qt 分发链，改用完整 Python 3.13 Tcl/Tk 环境构建 Tkinter 分发应用，修复 Windows 启动失败。
 
 ### Added
 

@@ -8,7 +8,7 @@
 | 项目 | 状态 |
 | --- | --- |
 | 项目内 DOCX/PPTX/XLSX 样本 | 0 个 |
-| 项目本地 Python 环境 | 已创建：`.venv`，Python 3.12.13 |
+| Windows 构建 Python 环境 | 已创建：`.venv-tk`，Python 3.13.9，Tcl/Tk 8.6 |
 | 系统 `python` / `py` 命令 | 不可用 |
 | Codex 受控 Python 运行时 | 可用，仅作环境探测，不作为项目依赖 |
 | 探测到的候选库 | `python-docx 1.2.0`、`python-pptx 1.0.2`、`openpyxl 3.1.5` |

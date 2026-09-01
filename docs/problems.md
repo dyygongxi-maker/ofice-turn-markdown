@@ -42,3 +42,10 @@
 - 根因：PyInstaller 默认将 `shiboken6.abi3.dll` 放入 `_internal\\shiboken6`，但 `PySide6\\pyside6.abi3.dll` 由 Windows 加载器加载时只会在其自身目录及已注册目录中查找依赖，因而无法解析该 DLL，导致 `QtWidgets` 导入失败。
 - 处理：构建脚本显式将 `shiboken6.abi3.dll` 作为二进制文件收集到 `_internal\\PySide6`；增加回归测试验证此打包规则。
 - 预防：所有含原生扩展的桌面依赖都要检查直接 DLL 依赖与最终目录布局，且必须从干净 `dist` 目录启动验证。
+
+## PR-007：Qt 分发链在当前环境无法稳定运行
+
+- 状态：已解决，改用 Tkinter/Tcl-Tk 构建链。
+- 根因：当前 Python 3.12 受控运行时缺少 Tcl/Tk；改用 Qt Essentials 后，即使补充 `shiboken6` 与 DLL 搜索路径，PyInstaller 分发产物仍无法加载 `QtWidgets`。该环境下 Qt 原生依赖链不具备可交付性。
+- 处理：使用系统 Python 3.13.9（Tcl/Tk 8.6）创建 `.venv-tk`，恢复 Tkinter UI；PyInstaller 已收集 `_tkinter` 和 Tcl/Tk 数据，成品已实际创建主窗口。
+- 预防：将“分发程序创建预期主窗口”作为桌面验收条件；若基础运行时不具备所需标准库资源，不以增加大型 UI 框架作为默认补救方案。

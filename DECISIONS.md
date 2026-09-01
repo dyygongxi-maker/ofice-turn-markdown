@@ -36,8 +36,17 @@
 ## D-005：以 PySide6-Essentials 替换 Tkinter 分发宿主
 
 - 日期：2026-09-01
-- 状态：已接受
+- 状态：已取代（D-006）
 - 决定：MVP 的 Windows 分发应用改用 `PySide6-Essentials` 的 Qt 原生桌面界面，直接调用转换应用服务。
 - 原因：打包验证发现当前 Python 环境缺少可用 Tcl/Tk 资源，PyInstaller 会排除 `tkinter`，使 Tkinter 应用无法在分发产物中启动。`PySide6-Essentials` 包含所需的 Qt Widgets 运行时并可随应用分发。
 - 替代方案：修复或重建 Tcl/Tk 环境将把分发正确性依赖于当前构建机的 Python 安装；本地 FastAPI + 浏览器界面仍受目录写入权限限制；Tauri + React + Python sidecar 增加 Rust、TypeScript 与进程通信复杂度。
 - 影响：增加约 77 MB 的 Qt Essentials 分发依赖；转换核心保持 UI 无关。每次发布必须构建并启动新产物，确认桌面运行时已被包含。
+
+## D-006：以完整 Tcl/Tk 的 Python 3.13 构建 Tkinter 分发应用
+
+- 日期：2026-09-01
+- 状态：已接受
+- 决定：MVP 恢复使用 Tkinter 桌面 UI，并使用项目内 `.venv-tk`（基于 Python 3.13.9、Tcl/Tk 8.6）执行测试和 PyInstaller 构建。
+- 原因：Qt Essentials 在当前 PyInstaller 运行时出现不可解析的 Windows 原生 DLL 链，即使文件收集与路径补偿均已尝试，分发产物仍无法加载 `QtWidgets`。系统 Python 3.13 已验证包含可用 Tcl/Tk；其 PyInstaller 产物正确收集 Tcl/Tk 数据并成功创建主窗口。
+- 替代方案：继续修补 Qt DLL 布局风险高且难以在当前环境可靠验证；浏览器和 Tauri 方案仍不符合 MVP 的本地目录选择与复杂度边界。
+- 影响：Windows 构建要求使用 `.venv-tk`，不能用缺失 Tcl/Tk 的旧 `.venv`。转换核心保持 UI 无关；后续升级 Python 时必须重新执行完整构建与主窗口验证。
