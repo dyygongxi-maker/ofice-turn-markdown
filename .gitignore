@@ -3,6 +3,7 @@
 
 # Python and Node environments
 .venv/
+.venv-ui/
 venv/
 node_modules/
 __pycache__/

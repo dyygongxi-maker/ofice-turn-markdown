@@ -1,144 +1,82 @@
-# 技术路线：廾匸转换
+# 技术路线：v0.3 知识库归档增强版
 
-**状态：** MVP 已实现并通过基础验证
+**状态：** 已规划，尚未实现
 **日期：** 2026-09-01
 
-## 1. 路线结论
+## 1. 技术结论
 
-推荐以 **Python 转换核心 + Tkinter Windows 原生桌面 UI** 构建 MVP。构建环境固定使用含 Tcl/Tk 的 Python 3.13，以满足纯本地运行、可靠的文件/目录选择和 Windows 分发需求，同时使解析与 UI 维持明确边界。
+保持现有 Python 转换核心与 Tkinter 本地桌面 UI，不增加数据库、HTTP API 或网络依赖。下一阶段新增批处理应用服务与输出选项，单文件转换仍是唯一负责解析、暂存和原子发布的底层合同。
 
-MVP 不建立云端、数据库或 HTTP API。转换记录只存在于当前进程和用户选择的输出目录中。
+首版队列采用单工作线程顺序执行。它比并发实现更容易解释输出冲突、取消边界和文件资源占用；只有样本验证显示性能不足时才评估有限并发。
 
-## 2. 方案比较
-
-| 方案 | 优点 | 缺点 | 结论 |
-| --- | --- | --- | --- |
-| Python + Tkinter（完整 Tcl/Tk） | 标准库、原生文件选择；PyInstaller 可收集 Tcl/Tk 资源 | 构建机必须使用完整 Python 安装 | 推荐 |
-| FastAPI + 浏览器 UI | Web UI 开发快；未来 Web 服务可复用 | 输出目录写入受浏览器限制；多运行时 | 不适合当前流程 |
-| Tauri + Web UI + Python sidecar | 现代桌面体验；未来跨平台潜力 | 双语言、进程通信和打包复杂度高 | 未来重新评估 |
-
-## 3. 目标技术栈
-
-| 层 | 候选 | 职责 |
-| --- | --- | --- |
-| 运行时 | Python 3.13.9 | 转换核心、文件操作、桌面运行时 |
-| 桌面 UI | Tkinter（标准库） | 文件/目录选择、结果与错误展示 |
-| DOCX 适配器 | `python-docx` | 文本、段落、表格、图片和关系提取 |
-| PPTX 适配器 | `python-pptx` | 幻灯片、形状、表格、图片与备注提取 |
-| XLSX 适配器 | `openpyxl` | 工作表、单元格、合并区域和公式文本提取 |
-| 输入防护 | ZIP/OOXML 检查与安全 XML 解析 | 类型、体积、压缩膨胀和宏风险控制 |
-| 打包 | PyInstaller | 在验证完成后生成 Windows 安装/分发产物 |
-
-库和版本在技术尖峰通过前均为候选，不应在公开界面中承诺支持范围。
-
-## 4. 模块边界与合同
+## 2. 目标架构
 
 ```text
-ui/
-  desktop/                -> presentation only
-application/
-  conversion_service.py   -> orchestration and progress
-domain/
-  models.py               -> normalized document contract
-  warnings.py             -> stable warning codes
-adapters/
-  docx/ pptx/ xlsx/       -> read OOXML into domain models
-renderers/
-  markdown/               -> render domain models and reports
-infrastructure/
-  filesystem/             -> staging output, cleanup, atomic publish
+Tkinter 主线程
+  -> 队列控制器 / 线程安全事件队列
+  -> 后台 BatchConversionService（顺序）
+  -> ConversionService（单文件校验、解析、暂存、原子发布）
+  -> OOXML adapters -> ParsedDocument -> Markdown renderer / report / manifest
 ```
 
-核心合同在实现前先定义并测试：
+Tkinter 控件只能在主线程更新；后台线程只发布进度事件。适配器不感知队列、UI 或 Obsidian 路径规则。
+
+## 3. 合同演进
+
+在 `models.py` 中新增不可变选项与批处理模型：
 
 ```text
-ConversionRequest
-  source_path: Path
-  output_parent: Path
-  options: ConversionOptions
+ConversionOptions
+  obsidian_mode: bool
+  tags: tuple[str, ...]
+  include_frontmatter: bool
+  include_source_link: bool
+  source_link_root: Path | None
+  copy_source: bool
 
-ConversionResult
-  output_path: Path
-  report_path: Path
-  warnings: list[ConversionWarning]
+BatchItem
+  source_path, status, result, error_code, error_message
 
-NormalizedDocument
-  blocks: ordered list[Block]
-  assets: list[Asset]
-  source_metadata: SourceMetadata
-  warnings: list[ConversionWarning]
+BatchResult
+  items, started_at, completed_at
 ```
 
-`Block` 使用显式类型区分标题、段落、列表、表格、图片、链接和幻灯片分隔，不让渲染器理解 OOXML 细节。警告使用稳定代码，例如 `PPTX_READING_ORDER_AMBIGUOUS`，报告文本可演进但代码保持可测试。
+`ConversionService.convert(source, output_parent, options)` 保持单文件边界；没有选项时输出与 v0.2 保持兼容。新增 `BatchConversionService` 循环调用该服务，不能把批处理逻辑放入 OOXML 适配器或 UI。
 
-## 5. 关键数据流与安全控制
+报告和 `source-manifest.json` 扩展为记录转换选项摘要、稳定警告代码和批处理项状态，但不记录正文、绝对原路径或其他隐私数据。
 
-```text
-selected source file
-  -> validate extension, OOXML package, size and ZIP expansion
-  -> parse without executing active content
-  -> normalized document + warnings
-  -> render Markdown and export static assets into staging directory
-  -> write report and manifest
-  -> validate output paths
-  -> atomically publish final output directory
-```
+## 4. Obsidian 实现约束
 
-- 拒绝不匹配扩展名与 OOXML 内容的文件，限制压缩包解压后的总大小与条目数。
-- 不执行宏、外部关系、嵌入脚本或链接目标；检测到宏和不支持对象时报告并按安全策略拒绝或跳过。
-- 所有输出文件名由受控的安全名称生成，拒绝路径穿越和覆盖非空目录。
-- 失败和取消时删除暂存目录；日志只保存错误代码、文件类型和统计数据，不保存正文。
+- 用受控序列化函数生成 YAML，不能拼接未校验的用户文本。
+- 标签限制字符集、长度与数量；非法标签在转换前拒绝并给出明确错误。
+- 相对链接先解析并验证在用户指定根目录内；绝不写入绝对路径。
+- `safe_name()` 的 ASCII 文件名策略继续保护输出路径；中文工作表/文件名的可读性改进必须以映射清单和冲突测试实现，不能直接放宽路径安全规则。
+- 原文件复制为显式选择，默认关闭；复制时仍经受控输出路径写入。
 
-## 6. 风险优先实施顺序
+## 5. 兼容性策略
 
-### 阶段 0：样本与可行性尖峰
+先建立能力矩阵和回归样本，再逐项实现。每次改进遵循：检测 -> 保留可表达内容 -> 对不可表达部分给稳定警告 -> 通过结构与报告断言验证。不得以推测的视觉顺序、公式结果或图表内容替代来源数据。
 
-建立至少 12 个脱敏或自行构造的输入样本，每类格式至少 4 个；为每个样本记录必需元素、允许降级和预期警告。
+PPTX 的形状坐标排序仍仅是确定性降级策略，不是阅读顺序保证；两栏、重叠与组合形状要有专门样本和歧义警告。XLSX 不计算公式，只报告缓存可用性。
 
-**通过条件：** 候选库能稳定读取目标元素，无法支持的元素可被检测或明确记录。
+## 6. 实施顺序
 
-### 阶段 1：核心合同与 DOCX 垂直切片
+1. 定义选项、批处理状态、错误代码和报告/清单兼容性合同。
+2. 为单文件转换实现 Obsidian frontmatter、标签和相对来源链接，并保持默认输出不变。
+3. 实现不含 UI 的目录扫描与顺序批处理服务，覆盖部分失败、冲突、取消边界。
+4. 汇总批处理结果和报告。
+5. 改造 Tkinter：多选、文件夹、队列表、进度、取消和结果操作。
+6. 建立脱敏回归样本矩阵和能力合同。
+7. 以 DOCX、PPTX、XLSX 的小切片依次提升兼容性。
+8. 最后执行完整测试、Windows 打包和干净环境验收。
 
-实现统一模型、警告代码、暂存输出和 DOCX 基础转换，再通过一个桌面界面完成“选择文件 -> 选择目录 -> 转换 -> 打开输出”的闭环。
+详细任务、依赖和检查点见 [实施计划](../tasks/plan.md) 与 [任务清单](../tasks/todo.md)。
 
-**通过条件：** DOCX 样本能够稳定输出 Markdown、图片和报告；失败不留下最终半成品目录。
+## 7. 主要风险
 
-### 阶段 2：PPTX 适配器
-
-增加幻灯片、文本框、列表、表格、图片、备注和确定性阅读顺序；将歧义顺序与不支持对象写入报告。
-
-**通过条件：** 所有 PPTX 样本均能得到可审核的页面分节与警告。
-
-### 阶段 3：XLSX 适配器
-
-增加工作簿索引、工作表文件、使用区域、单元格内容和公式文本；建立大表、合并单元格和缓存缺失的降级策略。
-
-**通过条件：** XLSX 样本不伪造公式结果，表格和警告可重复生成。
-
-### 阶段 4：可靠性与分发
-
-补充输入恶意样本、取消/失败清理、回归测试、无网络运行检查和 Windows 打包验证。
-
-**通过条件：** 目标 Windows 环境可离线运行，输出不会覆盖用户已有内容，所有回归样本通过。
-
-## 7. 测试策略
-
-- 单元测试：文档模型、Markdown 转义、文件名规范化、警告代码、输出目录事务。
-- 适配器测试：每个样本的必需结构、资源数量、警告代码和 Markdown 片段。
-- 集成测试：从文件输入到最终输出目录，覆盖成功、损坏、类型伪装、取消和输出冲突。
-- 手工验收：在 Obsidian 打开输出，确认内部链接与相对图片路径可用。
-- 安全测试：ZIP 膨胀、路径穿越、宏条目、外部关系与超大文件。
-
-不以单一“文本数量”作为正确性判断；每个样本必须同时检查内容、结构、资源和警告。
-
-## 8. 实施计划与审批门槛
-
-实施任务详见 [计划](../tasks/plan.md) 与 [任务清单](../tasks/todo.md)。在以下条件前不得开始代码实现：
-
-1. 用户确认 D-004 的桌面 UI 方案。
-2. 至少每类一个真实或脱敏样本可用于可行性验证。
-3. 候选库和 Python 版本通过技术尖峰，并记录实际限制。
-
-## 9. 未来演进
-
-核心合同保持文件系统和 UI 无关。后续可替换或新增 WPS 原生格式输入适配器、批量队列、PDF/OCR、Obsidian 模板或独立的云端产品，但这些功能不可修改已存在的 `ConversionResult` 基础语义或警告代码。
+| 风险 | 缓解 |
+| --- | --- |
+| 大目录或复杂文件导致界面无响应 | 后台顺序线程、进度事件、文件数量/大小限制与可取消边界 |
+| 元数据或链接泄露本地路径 | 只允许校验后的相对路径，自动化扫描输出中绝对路径 |
+| 输出冲突或中途失败损坏归档 | 复用单文件暂存/原子发布，默认跳过冲突 |
+| 复杂布局被错误表述为已转换 | 能力矩阵、稳定警告代码和真实样本回归 |

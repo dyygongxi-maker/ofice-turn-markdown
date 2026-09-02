@@ -1,19 +1,20 @@
 # 样本可行性验证日志
 
 **状态：** 已建立基准；项目环境、基础自动化与 Windows 分发启动已验证
-**更新日期：** 2026-09-01
+**更新日期：** 2026-09-02
 
 ## 运行环境事实
 
 | 项目 | 状态 |
 | --- | --- |
 | 项目内 DOCX/PPTX/XLSX 样本 | 0 个 |
-| Windows 构建 Python 环境 | 已创建：`.venv-tk`，Python 3.13.9，Tcl/Tk 8.6 |
+| Windows 构建 Python 环境 | 已验证：`.venv`，Python 3.12.13，Tcl/Tk 8.6；构建脚本显式分发 Tcl/Tk 资源 |
 | 系统 `python` / `py` 命令 | 不可用 |
 | Codex 受控 Python 运行时 | 可用，仅作环境探测，不作为项目依赖 |
 | 探测到的候选库 | `python-docx 1.2.0`、`python-pptx 1.0.2`、`openpyxl 3.1.5` |
 | 样本合同校验 | 通过：12 个计划样本，覆盖 DOCX、PPTX、XLSX |
-| Windows 分发启动 | 通过：PyInstaller 产物启动后持续运行 |
+| Windows 分发启动 | 通过：2026-09-01 实际启动最新 PyInstaller 产物并确认进程持续运行 |
+| WPS 演示自动化 | 通过：本机 WPS 演示 COM 可创建并关闭；使用无敏感合成 PPTX 以 `SaveAs(..., 32)` 导出 PDF，并逐页导出 PNG |
 
 ## 样本登记
 
@@ -30,6 +31,7 @@
 - 清单包含 12 个计划样本，三种格式均被覆盖。
 - 现有测试在临时目录生成合成 DOCX、PPTX、XLSX，并已通过基础端到端转换。
 - 旧的 YAML 清单与引用已移除，避免引入未声明的 YAML 依赖。
+- WPS 演示 COM 不兼容 PowerPoint 的 `ExportAsFixedFormat`；PDF 导出使用 WPS 兼容的 `SaveAs(..., 32)` 路径。该路径已作为默认视觉导出引擎实现，并完成无敏感合成 PPTX 端到端验证。
 
 ## 下一步门槛
 

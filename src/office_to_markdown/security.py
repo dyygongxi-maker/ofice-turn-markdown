@@ -18,10 +18,11 @@ REQUIRED_PARTS = {
 MAX_COMPRESSED_BYTES = 100 * 1024 * 1024
 MAX_EXPANDED_BYTES = 300 * 1024 * 1024
 MAX_ARCHIVE_ENTRIES = 10_000
+TAG_PATTERN = re.compile(r"[A-Za-z0-9_\-/]{1,64}")
 
 
 def safe_name(value: str, fallback: str = "document") -> str:
-    normalized = re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip(".-")
+    normalized = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "-", value).strip(". -")
     return normalized[:80] or fallback
 
 
@@ -56,3 +57,17 @@ def validate_input(source: Path) -> None:
 def ensure_output_parent(path: Path) -> None:
     if not path.is_dir():
         raise ValidationError("请选择一个已存在的输出目录。")
+
+
+def validate_tags(tags: tuple[str, ...]) -> None:
+    if len(tags) > 20 or len(set(tags)) != len(tags):
+        raise ValidationError("标签数量过多或存在重复标签。")
+    if any(not TAG_PATTERN.fullmatch(tag) for tag in tags):
+        raise ValidationError("标签只能包含字母、数字、下划线、连字符和斜杠。")
+
+
+def relative_source_path(source: Path, root: Path) -> Path:
+    try:
+        return source.resolve().relative_to(root.resolve())
+    except ValueError as error:
+        raise ValidationError("原文件必须位于指定的 Obsidian 归档根目录内。") from error

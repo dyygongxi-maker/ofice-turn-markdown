@@ -11,6 +11,11 @@ from .models import Asset, Block, ParsedDocument, WarningItem
 from .security import safe_name
 
 
+def unsupported_pptx_shape_types() -> set:
+    names = ("CHART", "EMBEDDED_OLE_OBJECT", "LINKED_OLE_OBJECT", "OLE_CONTROL_OBJECT")
+    return {value for name in names if (value := getattr(MSO_SHAPE_TYPE, name, None)) is not None}
+
+
 def _table_rows(table) -> list[list[str]]:
     return [[cell.text.strip() for cell in row.cells] for row in table.rows]
 
@@ -50,9 +55,7 @@ def parse_docx(source: Path) -> ParsedDocument:
             continue
     warnings = []
     if document.inline_shapes and not assets:
-        warnings.append(
-            WarningItem("DOCX_IMAGE_EXPORT_FAILED", "有一张内嵌图片未能导出。")
-        )
+        warnings.append(WarningItem("DOCX_IMAGE_EXPORT_FAILED", "有一张内嵌图片未能导出。"))
     return ParsedDocument(title, "docx", blocks, assets=assets, warnings=warnings)
 
 
@@ -66,7 +69,17 @@ def parse_pptx(source: Path) -> ParsedDocument:
             if getattr(shape, "has_table", False):
                 document.blocks.append(Block("table", rows=_table_rows(shape.table)))
             elif shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
-                image = shape.image
+                try:
+                    image = shape.image
+                except (AttributeError, ValueError):
+                    document.warnings.append(
+                        WarningItem(
+                            "PPTX_LINKED_IMAGE_UNSUPPORTED",
+                            "链接或无法读取的图片未导出。",
+                            f"第 {number} 页",
+                        )
+                    )
+                    continue
                 name = (
                     f"slide-{number}-image-{len(document.assets) + 1}.{safe_name(image.ext, 'bin')}"
                 )
@@ -89,7 +102,7 @@ def parse_pptx(source: Path) -> ParsedDocument:
                     )
                     if is_title and number == 1 and document.title == source.stem:
                         document.title = text
-            elif shape.shape_type in {MSO_SHAPE_TYPE.CHART, MSO_SHAPE_TYPE.OLE_OBJECT}:
+            elif shape.shape_type in unsupported_pptx_shape_types():
                 document.warnings.append(
                     WarningItem(
                         "PPTX_OBJECT_UNSUPPORTED",

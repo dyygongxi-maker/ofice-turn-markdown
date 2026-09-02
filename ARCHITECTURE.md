@@ -2,7 +2,7 @@
 
 ## 状态
 
-本文记录已实现的 MVP 架构。
+本文记录已实现的 v0.3 架构及其演进边界。
 
 ## 架构原则
 
@@ -18,7 +18,7 @@ Tkinter desktop UI
   -> input and archive validation
   -> OOXML adapter (DOCX | PPTX | XLSX)
   -> normalized document model
-  -> Markdown renderer + asset exporter
+  -> Markdown renderer + asset exporter + optional WPS-first visual exporter
   -> staging output writer + conversion report
 ```
 
@@ -26,15 +26,16 @@ Tkinter desktop UI
 
 - 输入：用户明确选取的单个本地文件。
 - 临时数据：仅在项目配置的临时目录中存在，转换结束后清理。
-- 输出：用户选择的本地目录；包含 Markdown、资源和报告。
+- 输出：用户选择的本地目录；包含 Markdown、资源、报告，以及可选的 PPT 页面预览和 PDF。
 - 网络：MVP 运行时不发起外部网络请求。
 
 ## 实际技术栈
 
-- Python 3.13.9：Windows 构建运行时，包含 Tcl/Tk 8.6。
-- Tkinter（Python 标准库）：Windows 原生文件和目录选择、状态与错误入口；由 Python 3.13 的 Tcl/Tk 资源随 PyInstaller 分发。
+- Python 3.13.9：项目 `.venv-ui` 的 Windows 构建运行时，包含 Tcl/Tk 8.6。
+- Tkinter（Python 标准库）：Windows 原生文件和目录选择、状态与错误入口；构建脚本随 PyInstaller 分发 Tcl/Tk 资源。
 - `python-docx 1.2.0`、`python-pptx 1.0.2`、`openpyxl 3.1.5`：三类 OOXML 输入适配器。
 - PyInstaller 6.22.2：生成 Windows 分发目录。
+- WPS 演示（默认）与 Microsoft PowerPoint（后备）：通过本机 COM 自动化只读打开 PPTX，导出页面 PNG 和 PDF。WPS 使用 `SaveAs(..., 32)` 导出 PDF；两类导出脚本均由 Windows PowerShell 以 STA 模式启动，不可用时降级为报告警告。
 
 桌面 UI 直接调用应用服务，不在 MVP 中建立本地 HTTP API；这样既避免浏览器目录权限限制，也减少文件内容经由请求层复制的路径。
 
@@ -55,9 +56,15 @@ OOXML adapter
 ```text
 <source-name>-markdown/
   index.md
-  content.md | slides.md | sheets/
+  markdown/
+    <source-name>.md
+    sheets/                  # 仅 XLSX：每个工作表一个 Markdown
+  reports/
+    <source-name>转换报告.md
+  visuals/                  # 仅按需导出的 PPTX 视觉预览
+    pages/slide-001.png
+    <source-name>.pdf
   assets/
-  conversion-report.md
   source-manifest.json
 ```
 
@@ -65,3 +72,22 @@ OOXML adapter
 
 - 复杂 Word 浮动对象、PPT 多栏/组合形状、图表和 Excel 多区域表仍采用报告降级策略。
 - PPT 阅读顺序排序规则与 Excel 大工作表的性能阈值仍需真实样本确定。
+
+## v0.3 规划演进
+
+```text
+Tkinter 主线程
+  -> 队列控制器和线程安全事件队列
+  -> BatchConversionService（顺序处理）
+  -> ConversionService（现有单文件事务）
+  -> adapters -> normalized document -> renderer / report
+```
+
+- `ConversionService` 保持单文件解析、暂存与原子发布边界；批处理服务只负责扫描、调度、状态和汇总。
+- 新增 `ConversionOptions` 承载可选 Obsidian 输出，不改变默认 Markdown 协议。
+- UI 不直接访问解析器；后台线程只回传事件，所有 Tkinter 控件在主线程更新。
+- 桌面界面使用 Tkinter Canvas 自绘固定视觉：自定义标题栏、导入卡、输出规则卡、文件行和底部操作栏均由 Canvas 呈现，输入框以 Canvas 嵌入原生 Entry 保持文本输入能力。队列状态由 `BatchStatus` 映射为自绘的状态胶囊和进度条，不改变领域状态合同。
+- 默认 `1280x800` 布局将输出规则组织为两列选项，队列使用紧凑双行信息行；卡片高度、队列起点和底部操作栏为固定几何约束，并由源码回归断言保护，避免视觉附件行覆盖队列。
+- YAML 和来源链接必须使用受控序列化与相对路径校验，报告、清单和 UI 不得暴露绝对输入路径。
+
+详细路线见 [docs/technical-roadmap.md](docs/technical-roadmap.md)。
