@@ -105,3 +105,22 @@ Tkinter 主线程
 - YAML 和来源链接必须使用受控序列化与相对路径校验，报告、清单和 UI 不得暴露绝对输入路径。
 
 详细路线见 [docs/technical-roadmap.md](docs/technical-roadmap.md)。
+
+## 计划中的桌面 UI 重构
+
+本节描述已确认但尚未实施的目标结构，不代表当前源码已经完成迁移。
+
+```text
+office_to_markdown.app（兼容入口）
+  -> ui.main_window（窗口编排与任务生命周期）
+      -> ui.state（UI 状态与领域选项映射）
+      -> ui.queue_panel（有序文件队列与结果动作）
+      -> ui.settings_panel（输出与可选转换设置）
+      -> ui.status_bar（状态摘要、开始与取消）
+      -> ui.theme（ttk 视觉令牌）
+  -> BatchConversionService（保持现有顺序处理合同）
+```
+
+目标实现保留 Tkinter/Tcl-Tk 和现有发布链，以原生 Tk/ttk 控件替换主要 Canvas 命中区；Canvas 只用于原生控件无法合理表达的轻量视觉。UI 仍通过线程安全队列接收后台事件，所有 Tk 控件只在主线程更新。领域模型、转换服务、文件安全校验和输出协议不变。
+
+完整边界、状态矩阵和验收条件见 [docs/ui-redesign-spec.md](docs/ui-redesign-spec.md)，任务依赖见 [tasks/ui-redesign-plan.md](tasks/ui-redesign-plan.md)。
