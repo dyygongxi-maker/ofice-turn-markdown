@@ -16,7 +16,7 @@
 
 ## Phase 2：UI 基础和设置
 
-- [ ] Task 2：提取 `ui/state.py` 与 `ui/theme.py`。
+- [x] Task 2：提取 `ui/state.py` 与 `ui/theme.py`。
 - [ ] Task 3：实现 ttk 设置面板并保持选项映射。
 - [ ] Checkpoint B：设置切片、完整 pytest 与 Ruff 通过。
 
