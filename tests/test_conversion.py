@@ -65,6 +65,24 @@ def test_pyinstaller_uses_the_working_tkinter_build_environment() -> None:
     assert '$ErrorActionPreference = "Stop"' in build_script
 
 
+def test_windows_installer_defines_a_per_user_desktop_release() -> None:
+    installer = Path("installer/office-to-markdown.iss").read_text(encoding="utf-8")
+    package_script = Path("scripts/package-installer.ps1").read_text(encoding="utf-8")
+    package_metadata = Path("pyproject.toml").read_text(encoding="utf-8")
+
+    assert '#define MyAppName "廾匸转换"' in installer
+    assert 'AppName={#MyAppName}' in installer
+    assert 'DefaultDirName={localappdata}\\Programs\\廾匸转换' in installer
+    assert 'OutputBaseFilename=廾匸转换-Setup-0.3.0' in installer
+    assert 'version = "0.3.0"' in package_metadata
+    assert 'Source: "..\\dist\\廾匸转换\\*"; DestDir: "{app}"' in installer
+    assert 'Name: "{autodesktop}\\廾匸转换"' in installer
+    assert 'Name: "{group}\\廾匸转换"' in installer
+    assert 'Filename: "{app}\\廾匸转换.exe"' in installer
+    assert "ISCC.exe" in package_script
+    assert "build.ps1" in package_script
+
+
 def test_desktop_ui_uses_tkinter() -> None:
     app_module = Path("src/office_to_markdown/app.py").read_text(encoding="utf-8")
     assert "import tkinter as tk" in app_module

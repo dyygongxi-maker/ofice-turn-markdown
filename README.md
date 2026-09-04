@@ -23,6 +23,16 @@
 powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1
 ```
 
+## Windows 安装包
+
+在已安装 Inno Setup 6 的 Windows 构建机上运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\package-installer.ps1
+```
+
+生成的单文件安装程序位于 `release\廾匸转换-Setup-0.3.0.exe`。安装默认只作用于当前 Windows 用户，安装到 `%LocalAppData%\Programs\廾匸转换`；安装向导会创建开始菜单入口，并可选创建桌面快捷方式，系统“已安装的应用”中可卸载。
+
 ## 文档
 
 - [产品设计](docs/product-design.md)

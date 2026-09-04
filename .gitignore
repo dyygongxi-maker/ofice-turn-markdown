@@ -19,6 +19,7 @@ work/*
 !work/.gitkeep
 build/
 dist/
+release/
 *.spec
 
 # Editor and OS files

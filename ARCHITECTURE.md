@@ -35,9 +35,22 @@ Tkinter desktop UI
 - Tkinter（Python 标准库）：Windows 原生文件和目录选择、状态与错误入口；构建脚本随 PyInstaller 分发 Tcl/Tk 资源。
 - `python-docx 1.2.0`、`python-pptx 1.0.2`、`openpyxl 3.1.5`：三类 OOXML 输入适配器。
 - PyInstaller 6.22.2：生成 Windows 分发目录。
+- Inno Setup 6：将经过启动验证的 PyInstaller 分发目录封装为当前用户安装程序，负责开始菜单、可选桌面快捷方式与卸载注册。
 - WPS 演示（默认）与 Microsoft PowerPoint（后备）：通过本机 COM 自动化只读打开 PPTX，导出页面 PNG 和 PDF。WPS 使用 `SaveAs(..., 32)` 导出 PDF；两类导出脚本均由 Windows PowerShell 以 STA 模式启动，不可用时降级为报告警告。
 
 桌面 UI 直接调用应用服务，不在 MVP 中建立本地 HTTP API；这样既避免浏览器目录权限限制，也减少文件内容经由请求层复制的路径。
+
+## Windows 安装包
+
+```text
+scripts/build.ps1
+  -> dist/廾匸转换/                 # 可运行目录包
+  -> installer/office-to-markdown.iss
+  -> release/廾匸转换-Setup-0.3.0.exe
+  -> %LocalAppData%/Programs/廾匸转换/ # 安装后的当前用户应用
+```
+
+`scripts/package-installer.ps1` 是唯一的正式安装包入口：它先重建分发目录，再调用 Inno Setup 编译器。`dist/` 与 `release/` 都是可再生发布产物，必须保持 Git 忽略。
 
 ## 关键合同
 
