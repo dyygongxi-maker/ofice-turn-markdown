@@ -1,18 +1,5 @@
 # Changelog
 
-## [0.2.0] - 2026-09-01
-
-### Added
-
-- 本地 Tkinter 桌面应用，支持选择 DOCX、PPTX、XLSX 和输出目录。
-- 安全 OOXML 包校验、原子输出发布、Markdown/资源/报告/清单生成。
-- DOCX、PPTX、XLSX 转换器及 6 项自动化安全和集成测试。
-- 本地虚拟环境配置、依赖锁定和 PyInstaller Windows 打包脚本。
-
-### Security
-
-- 拒绝扩展名伪装、宏条目、异常 ZIP 路径、超限包和已有输出目录覆盖。
-
 ## [0.3.0] - 2026-09-04
 
 ### Added
@@ -67,6 +54,19 @@
 ### Changed
 
 - 确认原生桌面 UI 方案，进入样本基准与可行性验证阶段。
+
+## [0.2.0] - 2026-09-01
+
+### Added
+
+- 本地 Tkinter 桌面应用，支持选择 DOCX、PPTX、XLSX 和输出目录。
+- 安全 OOXML 包校验、原子输出发布、Markdown/资源/报告/清单生成。
+- DOCX、PPTX、XLSX 转换器及 6 项自动化安全和集成测试。
+- 本地虚拟环境配置、依赖锁定和 PyInstaller Windows 打包脚本。
+
+### Security
+
+- 拒绝扩展名伪装、宏条目、异常 ZIP 路径、超限包和已有输出目录覆盖。
 
 ## [0.1.0] - 2026-09-01
 
