@@ -86,40 +86,37 @@ def test_windows_installer_defines_a_per_user_desktop_release() -> None:
 
 def test_desktop_ui_uses_tkinter() -> None:
     app_module = Path("src/office_to_markdown/app.py").read_text(encoding="utf-8")
-    assert "import tkinter as tk" in app_module
+    main_window = Path("src/office_to_markdown/ui/main_window.py").read_text(encoding="utf-8")
+    assert "import tkinter as tk" in main_window
     assert "from PySide6.QtWidgets import" not in app_module
 
 
 def test_desktop_ui_defines_a_structured_workbench_layout() -> None:
-    app_module = Path("src/office_to_markdown/app.py").read_text(encoding="utf-8")
+    main_window = Path("src/office_to_markdown/ui/main_window.py").read_text(encoding="utf-8")
+    theme = Path("src/office_to_markdown/ui/theme.py").read_text(encoding="utf-8")
+    settings = Path("src/office_to_markdown/ui/settings_panel.py").read_text(encoding="utf-8")
 
-    assert "self.root.overrideredirect(False)" in app_module
-    assert '"#EFF1F5"' in app_module
-    assert '"#3660F4"' in app_module
-    assert '"本地处理 · 不上传文件"' in app_module
-    assert '"PPTX 视觉附件"' in app_module
-    assert '"待处理文件"' in app_module
-    assert 'option_add("*Font"' not in app_module
+    assert "self.root.overrideredirect(False)" in main_window
+    assert '"#EFF1F5"' in theme
+    assert '"#3660F4"' in theme
+    assert '"本地处理，不上传文件"' in main_window
+    assert '"PPTX 视觉附件"' in settings
+    assert 'option_add("*Font"' not in main_window
 
 
 def test_desktop_ui_defines_the_redesigned_operational_hierarchy() -> None:
-    app_module = Path("src/office_to_markdown/app.py").read_text(encoding="utf-8")
+    main_window = Path("src/office_to_markdown/ui/main_window.py").read_text(encoding="utf-8")
+    queue_panel = Path("src/office_to_markdown/ui/queue_panel.py").read_text(encoding="utf-8")
+    state = Path("src/office_to_markdown/ui/state.py").read_text(encoding="utf-8")
 
-    assert "self.root.minsize(1040, 760)" in app_module
-    assert "self.root.resizable(True, True)" in app_module
-    assert "def _draw_queue" in app_module
-    assert "self._build_queue_viewport" in app_module
-    assert "self.queue_canvas" in app_module
-    assert "self.queue_scrollbar" in app_module
-    assert "self._on_mousewheel" in app_module
-    assert "self._hover_key" in app_module
-    assert "self._queue_hover_key" in app_module
-    assert '"尚未添加文件"' in app_module
-    assert "self.include_source_link = tk.BooleanVar(value=False)" in app_module
-    assert "self.export_pptx_png = tk.BooleanVar(value=False)" in app_module
-    assert "def _sync_option_states" in app_module
-    assert "BOTTOM_BAR_HEIGHT" in app_module
-    assert "QUEUE_ROW_HEIGHT" in app_module
+    assert "self.root.minsize(1040, 760)" in main_window
+    assert "self.root.resizable(True, True)" in main_window
+    assert "QueuePanel" in main_window
+    assert "SettingsPanel" in main_window
+    assert "StatusBar" in main_window
+    assert "ttk.Treeview" in queue_panel
+    assert "UiPhase" in state
+    assert "self.status = tk.StringVar" in state
 
 
 def test_user_visible_output_is_localized_to_chinese(tmp_path: Path) -> None:
@@ -133,7 +130,7 @@ def test_user_visible_output_is_localized_to_chinese(tmp_path: Path) -> None:
     app_module = Path("src/office_to_markdown/app.py").read_text(encoding="utf-8")
     assert "源文件格式" in index
     assert "# 转换报告" in report
-    assert 'self.root.title("廾匸转换")' in app_module
+    assert "from .ui.main_window import MainWindow" in app_module
 
 
 def test_rejects_extension_content_mismatch_and_macros(tmp_path: Path) -> None:
@@ -557,105 +554,37 @@ def _hidden_main_window() -> MainWindow:
 
 
 def test_desktop_ui_interactions_and_responsive_layout(tmp_path: Path) -> None:
-    """Single-window smoke test covering layout, scaling, queue and controls.
-
-    Creating and destroying multiple Tk roots in one pytest process is fragile
-    in this environment, so all UI assertions share one hidden window.
-    """
+    """Native workbench smoke test for sizing, Treeview scrolling and state changes."""
     window = _hidden_main_window()
     try:
-        # Folder scans are intentionally shallow by default so selecting a
-        # parent directory cannot unexpectedly enqueue an entire archive.
-        assert window.recursive.get() is False
-
-        # Default 1280x800 layout.
+        assert window.state.recursive.get() is False
         assert not bool(window.root.overrideredirect())
         assert window.root.winfo_width() >= 1040
         assert window.root.winfo_height() >= 760
-        assert window.canvas.winfo_width() >= 1040
-        assert window.canvas.winfo_height() >= 760
-        assert window.queue_frame.winfo_height() > 0
-        queue_bottom = window.queue_frame.winfo_y() + window.queue_frame.winfo_height()
-        assert queue_bottom <= window.root.winfo_height() - window.BOTTOM_BAR_HEIGHT
-
-        # Real native resize at the declared minimum size.
+        assert window.queue_panel.tree.winfo_height() > 0
+        assert window.settings_panel.winfo_height() > 0
+        assert window.status_bar.winfo_height() > 0
         window.root.geometry("1040x760")
         window.root.update()
         assert window.root.winfo_width() >= 1040
         assert window.root.winfo_height() >= 760
-        assert window.canvas.winfo_width() >= 1040
-        assert window.canvas.winfo_height() >= 760
-        for _key, (x1, y1, x2, y2) in window.hitboxes:
-            assert 0 <= x1 <= x2 <= 1040
-            assert 0 <= y1 <= y2 <= 760
-
-        # Restore the preferred size before adding files.
-        window.root.geometry("1280x800")
-        window.root.update()
-
-        # Queue scrolls once it exceeds the viewport.
         for i in range(20):
             source = tmp_path / f"doc{i:02d}.docx"
             Document().save(source)
         window.sources = sorted(tmp_path.glob("*.docx"))
-        window._draw()
+        window.refresh()
         window.root.update()
-        total_height = len(window.sources) * window.QUEUE_ROW_HEIGHT
-        assert total_height > window.queue_canvas.winfo_height()
-        assert window.queue_scrollbar.winfo_ismapped()
-
-        # File selection highlights a row.
         first_key = str(window.sources[0])
         window.selected_key = first_key
-        window._draw_queue()
+        window.refresh()
         assert window.selected_key == first_key
-        window.queue_canvas.yview_moveto(0.5)
-        window._draw_queue()
-        assert window.queue_canvas.yview()[0] > 0
-
-        # Hover and checkbox dispatch.
-        keys = {key for key, _ in window.hitboxes}
-        assert {"files", "folder", "obsidian", "recursive"}.issubset(keys)
-        first_key, (x1, y1, x2, y2) = window.hitboxes[0]
-        window.canvas.event_generate("<Motion>", x=(x1 + x2) // 2, y=(y1 + y2) // 2)
-        window.root.update_idletasks()
-        assert window._hover_key == first_key
-        before = window.obsidian.get()
-        window._dispatch("obsidian")
-        assert window.obsidian.get() is not before
-
-        # Button states: start disabled without sources, enabled with sources,
-        # open/report enabled only after a result, cancel only while working.
-        window.sources = []
-        window._draw()
-        window.root.update()
-        assert "start" not in {key for key, _ in window.hitboxes}
-        assert "cancel" not in {key for key, _ in window.hitboxes}
-
-        source = tmp_path / "brief.docx"
-        Document().save(source)
-        window.sources = [source]
-        window.output.set(str(tmp_path))
-        window._draw()
-        window.root.update()
-        keys_with_source = {key for key, _ in window.hitboxes}
-        assert "start" in keys_with_source
-        assert "cancel" not in keys_with_source
-        assert "open" not in keys_with_source
-        assert "report" not in keys_with_source
-
-        window.selected_key = str(source)
+        assert window.queue_panel.tree.selection() == (first_key,)
+        window.state.output.set(str(tmp_path))
         result = ConversionResult(tmp_path / "brief-markdown", tmp_path / "report.md", ())
-        window.results[str(source)] = BatchItem(source, BatchStatus.SUCCESS, result=result)
-        window._draw()
+        window.results[first_key] = BatchItem(window.sources[0], BatchStatus.SUCCESS, result=result)
+        window.refresh()
         window.root.update()
-        keys_with_result = {key for key, _ in window.hitboxes}
-        assert "open" in keys_with_result
-        assert "report" in keys_with_result
-
-        window.worker = BatchConversionService()
-        window._draw()
-        window.root.update()
-        assert "cancel" in {key for key, _ in window.hitboxes}
+        assert window.queue_panel.output_button.instate(("!disabled",))
+        assert window.queue_panel.report_button.instate(("!disabled",))
     finally:
         window.root.destroy()

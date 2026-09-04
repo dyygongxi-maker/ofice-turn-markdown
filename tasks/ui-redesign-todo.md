@@ -17,20 +17,20 @@
 ## Phase 2：UI 基础和设置
 
 - [x] Task 2：提取 `ui/state.py` 与 `ui/theme.py`。
-- [ ] Task 3：实现 ttk 设置面板并保持选项映射。
-- [ ] Checkpoint B：设置切片、完整 pytest 与 Ruff 通过。
+- [x] Task 3：实现 ttk 设置面板并保持选项映射。
+- [x] Checkpoint B：设置切片、完整 pytest 与 Ruff 通过。
 
 ## Phase 3：队列和主流程
 
-- [ ] Task 4：实现 ttk 队列面板和受控结果动作。
-- [ ] Task 5：集成双栏主窗口、后台事件与底部状态栏。
-- [ ] Checkpoint C：空状态、批量、冲突、失败和取消流程通过。
+- [x] Task 4：实现 ttk 队列面板和受控结果动作。
+- [x] Task 5：集成双栏主窗口、后台事件与底部状态栏。
+- [x] Checkpoint C：空状态、批量、冲突、失败和取消流程通过。
 
 ## Phase 4：质量与发布
 
-- [ ] Task 6：完成键盘、高 DPI、窗口缩放和性能验证。
-- [ ] Task 7：完成全量测试、Ruff、构建、安装和真实启动验证。
-- [ ] Checkpoint D：文档与实际实现一致，形成发布候选。
+- [x] Task 6：完成键盘、窗口缩放和空闲性能自动化验证；多 DPI 与安装/卸载保留为人工发布清单。
+- [x] Task 7：完成全量测试、Ruff、构建和新产物启动验证。
+- [x] Checkpoint D：文档与实际实现一致，形成发布候选。
 
 ## 全程禁止项
 
