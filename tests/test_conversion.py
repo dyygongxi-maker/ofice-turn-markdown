@@ -10,8 +10,9 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE
 
 from office_to_markdown import adapters
 from office_to_markdown.adapters import parse_pptx, unsupported_pptx_shape_types
+from office_to_markdown.app import MainWindow
 from office_to_markdown.batch import BatchConversionService, BatchStatus, discover_sources
-from office_to_markdown.models import ConversionOptions
+from office_to_markdown.models import BatchItem, ConversionOptions, ConversionResult
 from office_to_markdown.security import ValidationError
 from office_to_markdown.service import ConversionService
 from office_to_markdown.settings import SettingsStore
@@ -92,7 +93,7 @@ def test_desktop_ui_uses_tkinter() -> None:
 def test_desktop_ui_defines_a_structured_workbench_layout() -> None:
     app_module = Path("src/office_to_markdown/app.py").read_text(encoding="utf-8")
 
-    assert "self.root.overrideredirect(True)" in app_module
+    assert "self.root.overrideredirect(False)" in app_module
     assert '"#EFF1F5"' in app_module
     assert '"#3660F4"' in app_module
     assert '"本地处理 · 不上传文件"' in app_module
@@ -105,15 +106,20 @@ def test_desktop_ui_defines_the_redesigned_operational_hierarchy() -> None:
     app_module = Path("src/office_to_markdown/app.py").read_text(encoding="utf-8")
 
     assert "self.root.minsize(1040, 760)" in app_module
-    assert "def _draw_empty_queue" in app_module
-    assert "def _draw_title_bar" in app_module
-    assert "rules_height = 208" in app_module
-    assert "queue_y, queue_h = 494, max(228, height - 572)" in app_module
+    assert "self.root.resizable(True, True)" in app_module
+    assert "def _draw_queue" in app_module
+    assert "self._build_queue_viewport" in app_module
+    assert "self.queue_canvas" in app_module
+    assert "self.queue_scrollbar" in app_module
+    assert "self._on_mousewheel" in app_module
+    assert "self._hover_key" in app_module
+    assert "self._queue_hover_key" in app_module
     assert '"尚未添加文件"' in app_module
     assert "self.include_source_link = tk.BooleanVar(value=False)" in app_module
     assert "self.export_pptx_png = tk.BooleanVar(value=False)" in app_module
     assert "def _sync_option_states" in app_module
-    assert "if progress:" in app_module
+    assert "BOTTOM_BAR_HEIGHT" in app_module
+    assert "QUEUE_ROW_HEIGHT" in app_module
 
 
 def test_user_visible_output_is_localized_to_chinese(tmp_path: Path) -> None:
@@ -542,3 +548,110 @@ def test_batch_skips_existing_output_and_honors_cancel_before_next_item(tmp_path
     result = service.convert((first, second), tmp_path)
 
     assert all(item.status == BatchStatus.CANCELLED for item in result.items)
+
+
+def _hidden_main_window() -> MainWindow:
+    window = MainWindow()
+    window.root.update()
+    return window
+
+
+def test_desktop_ui_interactions_and_responsive_layout(tmp_path: Path) -> None:
+    """Single-window smoke test covering layout, scaling, queue and controls.
+
+    Creating and destroying multiple Tk roots in one pytest process is fragile
+    in this environment, so all UI assertions share one hidden window.
+    """
+    window = _hidden_main_window()
+    try:
+        # Default 1280x800 layout.
+        assert not bool(window.root.overrideredirect())
+        assert window.root.winfo_width() >= 1040
+        assert window.root.winfo_height() >= 760
+        assert window.canvas.winfo_width() >= 1040
+        assert window.canvas.winfo_height() >= 760
+        assert window.queue_frame.winfo_height() > 0
+        queue_bottom = window.queue_frame.winfo_y() + window.queue_frame.winfo_height()
+        assert queue_bottom <= window.root.winfo_height() - window.BOTTOM_BAR_HEIGHT
+
+        # Real native resize at the declared minimum size.
+        window.root.geometry("1040x760")
+        window.root.update()
+        assert window.root.winfo_width() >= 1040
+        assert window.root.winfo_height() >= 760
+        assert window.canvas.winfo_width() >= 1040
+        assert window.canvas.winfo_height() >= 760
+        for _key, (x1, y1, x2, y2) in window.hitboxes:
+            assert 0 <= x1 <= x2 <= 1040
+            assert 0 <= y1 <= y2 <= 760
+
+        # Restore the preferred size before adding files.
+        window.root.geometry("1280x800")
+        window.root.update()
+
+        # Queue scrolls once it exceeds the viewport.
+        for i in range(20):
+            source = tmp_path / f"doc{i:02d}.docx"
+            Document().save(source)
+        window.sources = sorted(tmp_path.glob("*.docx"))
+        window._draw()
+        window.root.update()
+        total_height = len(window.sources) * window.QUEUE_ROW_HEIGHT
+        assert total_height > window.queue_canvas.winfo_height()
+        assert window.queue_scrollbar.winfo_ismapped()
+
+        # File selection highlights a row.
+        first_key = str(window.sources[0])
+        window.selected_key = first_key
+        window._draw_queue()
+        assert window.selected_key == first_key
+        window.queue_canvas.yview_moveto(0.5)
+        window._draw_queue()
+        assert window.queue_canvas.yview()[0] > 0
+
+        # Hover and checkbox dispatch.
+        keys = {key for key, _ in window.hitboxes}
+        assert {"files", "folder", "obsidian", "recursive"}.issubset(keys)
+        first_key, (x1, y1, x2, y2) = window.hitboxes[0]
+        window.canvas.event_generate("<Motion>", x=(x1 + x2) // 2, y=(y1 + y2) // 2)
+        window.root.update_idletasks()
+        assert window._hover_key == first_key
+        before = window.obsidian.get()
+        window._dispatch("obsidian")
+        assert window.obsidian.get() is not before
+
+        # Button states: start disabled without sources, enabled with sources,
+        # open/report enabled only after a result, cancel only while working.
+        window.sources = []
+        window._draw()
+        window.root.update()
+        assert "start" not in {key for key, _ in window.hitboxes}
+        assert "cancel" not in {key for key, _ in window.hitboxes}
+
+        source = tmp_path / "brief.docx"
+        Document().save(source)
+        window.sources = [source]
+        window.output.set(str(tmp_path))
+        window._draw()
+        window.root.update()
+        keys_with_source = {key for key, _ in window.hitboxes}
+        assert "start" in keys_with_source
+        assert "cancel" not in keys_with_source
+        assert "open" not in keys_with_source
+        assert "report" not in keys_with_source
+
+        window.selected_key = str(source)
+        result = ConversionResult(tmp_path / "brief-markdown", tmp_path / "report.md", ())
+        window.results[str(source)] = BatchItem(source, BatchStatus.SUCCESS, result=result)
+        window._draw()
+        window.root.update()
+        keys_with_result = {key for key, _ in window.hitboxes}
+        assert "open" in keys_with_result
+        assert "report" in keys_with_result
+
+        window.worker = BatchConversionService()
+        window._draw()
+        window.root.update()
+        assert "cancel" in {key for key, _ in window.hitboxes}
+    finally:
+        window.root.destroy()
