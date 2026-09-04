@@ -11,8 +11,8 @@
 
 ## Phase 1：兼容基线
 
-- [ ] Task 1：新增 UI 行为契约测试。
-- [ ] Checkpoint A：完整 pytest 与 Ruff 通过，尚无行为变化。
+- [x] Task 1：新增 UI 行为契约测试。
+- [x] Checkpoint A：完整 pytest 与 Ruff 通过，尚无行为变化。
 
 ## Phase 2：UI 基础和设置
 

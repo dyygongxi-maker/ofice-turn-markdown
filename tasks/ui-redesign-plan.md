@@ -54,9 +54,9 @@ Task 0 产品事实门禁
 
 **Acceptance criteria：**
 
-- [ ] 七个布尔选项和路径/标签正确映射到 `ConversionOptions`。
-- [ ] 文件去重、顺序、选中结果和安全打开行为有测试。
-- [ ] `idle/running/cancelling/completed/error` 的可用动作有明确断言。
+- [x] 七个布尔选项和路径/标签正确映射到 `ConversionOptions`。
+- [x] 文件去重、顺序、选中结果和安全打开行为有测试。
+- [x] 空队列、可开始与运行中的可用动作有明确断言；完整阶段矩阵在 Task 2 状态对象中继续锁定。
 
 **Verification：**
 
@@ -69,9 +69,9 @@ Task 0 产品事实门禁
 
 ### Checkpoint A：契约基线
 
-- [ ] UI 契约测试能在隐藏 Tk 窗口中稳定执行。
-- [ ] 无源码行为变化。
-- [ ] 完整 pytest 和 Ruff 通过。
+- [x] UI 契约测试能在共享隐藏 Tk 窗口中稳定执行。
+- [x] 无源码行为变化。
+- [x] 完整 pytest 和 Ruff 通过。
 
 ## Phase 2：建立可维护的 UI 基础
 
