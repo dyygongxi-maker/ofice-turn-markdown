@@ -564,6 +564,10 @@ def test_desktop_ui_interactions_and_responsive_layout(tmp_path: Path) -> None:
     """
     window = _hidden_main_window()
     try:
+        # Folder scans are intentionally shallow by default so selecting a
+        # parent directory cannot unexpectedly enqueue an entire archive.
+        assert window.recursive.get() is False
+
         # Default 1280x800 layout.
         assert not bool(window.root.overrideredirect())
         assert window.root.winfo_width() >= 1040

@@ -72,7 +72,7 @@ class MainWindow:
         self.output = tk.StringVar(value=str(default_output) if default_output else "")
         self.tags = tk.StringVar()
         self.vault_root = tk.StringVar()
-        self.recursive = tk.BooleanVar(value=True)
+        self.recursive = tk.BooleanVar(value=False)
         self.obsidian = tk.BooleanVar(value=False)
         self.include_source_link = tk.BooleanVar(value=False)
         self.copy_source = tk.BooleanVar(value=False)
