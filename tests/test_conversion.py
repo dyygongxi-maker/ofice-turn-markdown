@@ -91,6 +91,8 @@ def test_windows_release_uses_the_project_icon() -> None:
     assert '[string]$Python = ".venv-ui\\\\Scripts\\\\python.exe"' in build_script
     assert "assets\\app-icon.ico" in build_script
     assert "SetupIconFile=..\\assets\\app-icon.ico" in installer
+    assert 'Source: "..\\assets\\app-icon.ico"; DestDir: "{app}"' in installer
+    assert 'IconFilename: "{app}\\app-icon.ico"' in installer
 
 
 def test_desktop_ui_uses_tkinter() -> None:

@@ -27,6 +27,7 @@
 
 ### Fixed
 
+- Desktop and Start menu shortcuts now use the separately installed application icon, avoiding stale executable icon caching in Windows Explorer.
 - 使用 Windows 原生标题栏替换无边框自绘窗口控制，修复窗口无法可靠缩放、最大化和吸附的问题。
 - 文件夹扫描现在默认不包含子文件夹，避免选择上级目录时意外将大量 Office 文件加入队列；用户仍可按需启用递归扫描。
 

@@ -26,12 +26,13 @@ SetupIconFile=..\assets\app-icon.ico
 Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: "附加快捷方式："; Flags: checkedonce
 
 [Files]
+Source: "..\assets\app-icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\dist\廾匸转换\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\廾匸转换"; Filename: "{app}\廾匸转换.exe"
+Name: "{group}\廾匸转换"; Filename: "{app}\廾匸转换.exe"; IconFilename: "{app}\app-icon.ico"
 Name: "{group}\卸载廾匸转换"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\廾匸转换"; Filename: "{app}\廾匸转换.exe"; Tasks: desktopicon
+Name: "{autodesktop}\廾匸转换"; Filename: "{app}\廾匸转换.exe"; IconFilename: "{app}\app-icon.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\廾匸转换.exe"; Description: "启动廾匸转换"; Flags: nowait postinstall skipifsilent
