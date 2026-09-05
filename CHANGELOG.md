@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added a project-owned Windows application icon for the executable, installer, and generated shortcuts.
+
+### Removed
+
+- Removed obsolete incorrectly encoded Windows build directories and generated spec files from earlier releases.
+
 ### Changed
 
 - 桌面界面迁移为模块化 Tkinter/ttk 双栏工作台，使用原生队列、设置和底部执行控件，保留原有本地批量转换流程。

@@ -126,3 +126,12 @@
 - 处理：用户已确认默认不包含子文件夹；将 `MainWindow.recursive` 初始值改为 `False`，并新增窗口初始化回归断言。
 - 验证：聚焦 Tkinter UI 测试先以旧默认值失败，修复后通过；完整 pytest 与 Ruff 通过。
 - 预防：所有用户可见默认值必须在状态单元测试中显式断言；改变默认值时必须同步产品规格和 CHANGELOG。
+
+## PR-018：Windows 发布运行时在普通权限下不可启动
+
+- 状态：已解决，2026-09-05。
+- 现象：项目默认发布环境 `.venv-ui` 的 Python 启动器无法创建进程；其基准解释器 `C:\Users\27660\AppData\Local\Programs\Python\Python313\python.exe` 返回“拒绝访问”。
+- 影响：普通权限下无法运行发布环境，会阻断本地桌面构建；提升权限运行时不受影响。
+- 根因：Windows 对该 Python 3.13 安装目录的执行访问被系统环境拒绝；这不是项目源码或图标配置错误。备用 `.venv` 虽可运行测试和 PyInstaller，但绑定的受控 Python 缺少与其 Tcl 版本匹配的 `init.tcl`，不能作为 Tkinter 发布环境。
+- 处理：保持发布脚本默认环境与既有已验证约定一致；使用提升权限的 Windows 运行时执行完整测试、`scripts/create-icon.py`、`scripts/build.ps1` 和 `scripts/package-installer.ps1`。
+- 验证：完整 pytest 31 项通过，Ruff 通过；新 `dist\廾匸转换\廾匸转换.exe` 启动冒烟测试通过；新的 Inno Setup 安装包已生成，并验证安装包图标资源存在。

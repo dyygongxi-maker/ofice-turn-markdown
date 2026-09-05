@@ -84,6 +84,15 @@ def test_windows_installer_defines_a_per_user_desktop_release() -> None:
     assert "build.ps1" in package_script
 
 
+def test_windows_release_uses_the_project_icon() -> None:
+    build_script = Path("scripts/build.ps1").read_text(encoding="utf-8")
+    installer = Path("installer/office-to-markdown.iss").read_text(encoding="utf-8")
+
+    assert '[string]$Python = ".venv-ui\\\\Scripts\\\\python.exe"' in build_script
+    assert "assets\\app-icon.ico" in build_script
+    assert "SetupIconFile=..\\assets\\app-icon.ico" in installer
+
+
 def test_desktop_ui_uses_tkinter() -> None:
     app_module = Path("src/office_to_markdown/app.py").read_text(encoding="utf-8")
     main_window = Path("src/office_to_markdown/ui/main_window.py").read_text(encoding="utf-8")

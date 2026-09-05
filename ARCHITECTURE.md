@@ -50,7 +50,7 @@ scripts/build.ps1
   -> %LocalAppData%/Programs/廾匸转换/ # 安装后的当前用户应用
 ```
 
-`scripts/package-installer.ps1` 是唯一的正式安装包入口：它先重建分发目录，再调用 Inno Setup 编译器。`dist/` 与 `release/` 都是可再生发布产物，必须保持 Git 忽略。
+`scripts/package-installer.ps1` 是唯一的正式安装包入口：它先重建分发目录，再调用 Inno Setup 编译器。`assets/app-icon.ico` 由 `scripts/create-icon.py` 生成，并同时嵌入 PyInstaller 可执行文件和 Inno Setup 安装程序。`dist/` 与 `release/` 都是可再生发布产物，必须保持 Git 忽略。
 
 ## 关键合同
 

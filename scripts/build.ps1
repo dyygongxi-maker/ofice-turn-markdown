@@ -10,6 +10,7 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($Base)) {
 }
 $AppName = "$([char]0x5EFE)$([char]0x5338)$([char]0x8F6C)$([char]0x6362)"
 & $Python -m PyInstaller --noconfirm --clean --windowed --paths src --name OfficeToMarkdown `
+    --icon "assets\app-icon.ico" `
     --add-data "$Base\tcl;tcl" `
     --add-data "$Base\Lib\tkinter;tkinter" `
     --add-data "src\office_to_markdown\export_pptx_visuals.ps1;office_to_markdown" `
