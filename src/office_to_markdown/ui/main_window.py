@@ -67,7 +67,7 @@ class MainWindow:
         header.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 12))
         header.columnconfigure(0, weight=1)
         ttk.Label(header, text="廾匸转换", style="Title.TLabel").grid(row=0, column=0, sticky="w")
-        ttk.Label(header, text="Office 文件转 Markdown", style="Body.TLabel").grid(
+        ttk.Label(header, text="本地文档转 Markdown", style="Body.TLabel").grid(
             row=1, column=0, sticky="w"
         )
         ttk.Label(header, text="本地处理，不上传文件", style="Body.TLabel").grid(
@@ -97,7 +97,14 @@ class MainWindow:
         self.status_bar.refresh()
 
     def choose_files(self) -> None:
-        selected = filedialog.askopenfilenames(filetypes=[("Office 文件", "*.docx *.pptx *.xlsx")])
+        selected = filedialog.askopenfilenames(
+            filetypes=[
+                ("支持的文件", "*.docx *.pptx *.xlsx *.pdf *.txt"),
+                ("Office 文档", "*.docx *.pptx *.xlsx"),
+                ("PDF 文件", "*.pdf"),
+                ("文本文件", "*.txt"),
+            ]
+        )
         self._add_sources(Path(path) for path in selected)
 
     def choose_folder(self) -> None:
@@ -137,7 +144,7 @@ class MainWindow:
 
     def start(self) -> None:
         if not self.sources:
-            messagebox.showerror("无法开始", "请先添加 Office 文件。")
+            messagebox.showerror("无法开始", "请先添加支持的文件。")
             return
         try:
             output = Path(self.state.output.get())

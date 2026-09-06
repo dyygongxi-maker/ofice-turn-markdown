@@ -16,7 +16,7 @@
 Tkinter desktop UI
   -> application service
   -> input and archive validation
-  -> OOXML adapter (DOCX | PPTX | XLSX)
+  -> format adapter (DOCX | PPTX | XLSX | PDF | TXT)
   -> normalized document model
   -> Markdown renderer + asset exporter + optional WPS-first visual exporter
   -> staging output writer + conversion report
@@ -33,7 +33,8 @@ Tkinter desktop UI
 
 - Python 3.13.9：项目 `.venv-ui` 的 Windows 构建运行时，包含 Tcl/Tk 8.6。
 - Tkinter（Python 标准库）：Windows 原生文件和目录选择、状态与错误入口；构建脚本随 PyInstaller 分发 Tcl/Tk 资源。
-- `python-docx 1.2.0`、`python-pptx 1.0.2`、`openpyxl 3.1.5`：三类 OOXML 输入适配器。
+- `python-docx 1.2.0`、`python-pptx 1.0.2`、`openpyxl 3.1.5`：OOXML 输入适配器。
+- `pypdf 6.17.0`：本地 PDF 文本层、元数据与安全 HTTP(S) 链接提取；不包含 OCR。
 - PyInstaller 6.22.2：生成 Windows 分发目录。
 - Inno Setup 6：将经过启动验证的 PyInstaller 分发目录封装为当前用户安装程序，负责开始菜单、可选桌面快捷方式与卸载注册。
 - WPS 演示（默认）与 Microsoft PowerPoint（后备）：通过本机 COM 自动化只读打开 PPTX，导出页面 PNG 和 PDF。WPS 使用 `SaveAs(..., 32)` 导出 PDF；两类导出脚本均由 Windows PowerShell 以 STA 模式启动，不可用时降级为报告警告。
@@ -58,11 +59,11 @@ scripts/build.ps1
 ConversionRequest(source_path, output_parent, options)
   -> ConversionResult(output_path, report_path, warnings)
 
-OOXML adapter
+Format adapter
   -> NormalizedDocument(blocks, assets, source_metadata, warnings)
 ```
 
-适配器不直接写文件，渲染器不读取 OOXML，UI 不处理文档内容。输出先写入同级临时目录，全部成功后才原子性地改名为最终目录。
+适配器不直接写文件，渲染器不读取源文件，UI 不处理文档内容。OOXML 保持 ZIP 与宏安全校验；PDF 校验文件头与可读性；TXT 仅以受控编码读取。输出先写入同级临时目录，全部成功后才原子性地改名为最终目录。
 
 ## 预期输出结构
 
@@ -106,9 +107,9 @@ Tkinter 主线程
 
 详细路线见 [docs/technical-roadmap.md](docs/technical-roadmap.md)。
 
-## 计划中的桌面 UI 重构
+## 已实施的桌面 UI 重构
 
-本节描述已确认但尚未实施的目标结构，不代表当前源码已经完成迁移。
+本节描述当前已实施的模块结构。
 
 ```text
 office_to_markdown.app（兼容入口）
@@ -121,6 +122,6 @@ office_to_markdown.app（兼容入口）
   -> BatchConversionService（保持现有顺序处理合同）
 ```
 
-目标实现保留 Tkinter/Tcl-Tk 和现有发布链，以原生 Tk/ttk 控件替换主要 Canvas 命中区；Canvas 只用于原生控件无法合理表达的轻量视觉。UI 仍通过线程安全队列接收后台事件，所有 Tk 控件只在主线程更新。领域模型、转换服务、文件安全校验和输出协议不变。
+实现保留 Tkinter/Tcl-Tk 和现有发布链，以原生 Tk/ttk 控件承载主要交互。UI 仍通过线程安全队列接收后台事件，所有 Tk 控件只在主线程更新。领域模型、转换服务、文件安全校验和输出协议不变。
 
 完整边界、状态矩阵和验收条件见 [docs/ui-redesign-spec.md](docs/ui-redesign-spec.md)，任务依赖见 [tasks/ui-redesign-plan.md](tasks/ui-redesign-plan.md)。

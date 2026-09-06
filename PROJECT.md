@@ -6,12 +6,14 @@
 - 曾用显示名：Office to Markdown
 - 状态：v0.3 知识库归档增强版已完成；PPTX 视觉预览导出已实现，待扩大真实样本验证。
 - 目标用户：初期为个人用户；产品稳定后可面向公众。
-- 核心目标：在 Windows 本机将 DOCX、PPTX、XLSX 转换为适合知识库归档和 AI 阅读的 Markdown。
+- 核心目标：在 Windows 本机将 DOCX、PPTX、XLSX、PDF 和 TXT 转换为适合知识库归档和 AI 阅读的 Markdown。
 - 过程归档：`D:\obsidiam\obsidian-work\Codex工作记录\office-to-markdown\`（仅脱敏过程记录，非项目事实来源）。
 
 ## MVP 范围
 
-- 支持标准 OOXML 文件：`.docx`、`.pptx`、`.xlsx`。
+- 支持标准 OOXML 文件：`.docx`、`.pptx`、`.xlsx`，以及 `.pdf`、`.txt`。
+- PDF 仅提取可搜索的文本层、页码与 HTTP(S) 链接；扫描件或无文本层的 PDF 保留输出并在报告中提示先进行 OCR。
+- TXT 支持 UTF-8、UTF-16 与 GB18030 解码，保留空行、普通段落和基础列表结构。
 - 本地运行、本地选择输入与输出目录，不上传、不持久化原文件。
 - 输出以源文件名命名的 Markdown、导出的图片资源和独立存放的转换报告；可选导出 PPT 每页 PNG 与整份 PDF。
 - 优先保证语义内容与层级，不承诺视觉版式还原。
@@ -26,7 +28,7 @@
 
 当前阶段：v0.4 桌面工作台 UI 已完成。主界面使用模块化 Tkinter/ttk 双栏布局：文件队列为主、转换设置为辅、底部执行区固定；转换内核、线程模型和输出协议保持不变。
 
-下一阶段已完成桌面工作台 UI 重构方案，尚未开始编码。目标是在不改变转换能力、输出协议、安全边界、顺序批处理和发布链的前提下，将当前集中在 `app.py` 的 Canvas 自绘界面拆分为模块化 Tkinter/ttk 双栏工作台，优先改善维护性、键盘操作、高 DPI 和批量队列可读性。规格见 [桌面工作台 UI 重构规格](docs/ui-redesign-spec.md)，执行路线见 [UI 重构计划](tasks/ui-redesign-plan.md)。
+桌面工作台 UI 重构已完成；规格见 [桌面工作台 UI 重构规格](docs/ui-redesign-spec.md)，执行路线见 [UI 重构计划](tasks/ui-redesign-plan.md)。后续将以真实且脱敏的复杂文档样本扩展兼容性。
 
 Windows 分发构建使用项目内 `.venv-ui`（Python 3.13.9、Tcl/Tk 8.6）。构建脚本显式打包 Tcl/Tk 数据、DLL 与 `_tkinter` 扩展；PyInstaller 内部使用 ASCII 产物名，构建完成后在文件系统层发布为“廾匸转换”，以避免 Windows PowerShell 的参数编码问题。最新新版工作台已于 2026-09-02 完成真实 Tkinter 窗口创建与布局验证。
 
@@ -52,3 +54,4 @@ v0.3 的规划文档见 [产品设计](docs/product-design.md)、[技术路线](
 - Markdown 无法无损表达复杂页面布局、图表和嵌入对象。
 - PPT 视觉预览优先使用本机 WPS 演示自动化；本机已验证可导出 PDF 与逐页 PNG。若 WPS 不可用或导出失败，系统会尝试 Microsoft PowerPoint 自动化；两者都不可用时降级为 Markdown 和报告警告。
 - 文件夹扫描默认不包含子文件夹，以避免选择上级目录时意外加入大量文件；用户可在扫描前显式启用该选项。
+- 扫描件 PDF 不在当前版本进行 OCR；报告只提示处理方式，不会生成臆测文本。

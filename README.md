@@ -1,6 +1,6 @@
 # 廾匸转换
 
-在 Windows 本机将 Word、PowerPoint 和 Excel 的标准 OOXML 文件转换为适合知识库与 AI 阅读的 Markdown。
+在 Windows 本机将 Word、PowerPoint、Excel、PDF 和 TXT 文件转换为适合知识库与 AI 阅读的 Markdown。
 
 项目提供本地 Windows MVP；文件不会上传到网络。
 
@@ -11,7 +11,9 @@
 .\.venv-ui\Scripts\python.exe -m office_to_markdown
 ```
 
-选择一个 `.docx`、`.pptx` 或 `.xlsx` 文件和一个已有的空输出父目录。工具会创建同名的 `-markdown` 输出目录；正文位于 `markdown/<文件名>.md`，报告位于 `reports/<文件名>转换报告.md`。XLSX 还会在 `markdown/sheets/` 下保留逐工作表文件。
+选择一个 `.docx`、`.pptx`、`.xlsx`、`.pdf` 或 `.txt` 文件和一个已有的空输出父目录。工具会创建同名的 `-markdown` 输出目录；正文位于 `markdown/<文件名>.md`，报告位于 `reports/<文件名>转换报告.md`。XLSX 还会在 `markdown/sheets/` 下保留逐工作表文件。
+
+PDF 仅提取已有的可搜索文本层、页码和 HTTP(S) 链接。扫描件或没有文本层的 PDF 不会被 OCR，仍会生成 Markdown 与转换报告，并提示先使用 OCR 生成可搜索文本。TXT 读取 UTF-8、UTF-16 或 GB18030 编码，并转换基础段落和列表。
 
 处理 PPTX 时，可勾选“PPT 导出每页 PNG”或“PPT 导出版式 PDF”。导出结果分别位于 `visuals/pages/` 和 `visuals/<文件名>.pdf`。程序优先使用本机 WPS 演示，失败时尝试 Microsoft PowerPoint；两者都不可用时 Markdown 仍会生成，报告会记录警告。
 

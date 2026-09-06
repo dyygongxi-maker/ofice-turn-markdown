@@ -7,6 +7,15 @@ from docx import Document
 from openpyxl import Workbook
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
+from pypdf import PdfWriter
+from pypdf.generic import (
+    ArrayObject,
+    DecodedStreamObject,
+    DictionaryObject,
+    NameObject,
+    NumberObject,
+    TextStringObject,
+)
 
 from office_to_markdown import adapters
 from office_to_markdown.adapters import parse_pptx, unsupported_pptx_shape_types
@@ -19,11 +28,101 @@ from office_to_markdown.settings import SettingsStore
 from office_to_markdown.visuals import PptxVisualExporter, VisualExportError, WpsVisualExporter
 
 
-def test_rejects_non_office_input(tmp_path: Path) -> None:
-    source = tmp_path / "notes.txt"
-    source.write_text("not an office file", encoding="utf-8")
+def _write_text_pdf(path: Path) -> None:
+    writer = PdfWriter()
+    page = writer.add_blank_page(width=612, height=792)
+    font = DictionaryObject(
+        {
+            NameObject("/Type"): NameObject("/Font"),
+            NameObject("/Subtype"): NameObject("/Type1"),
+            NameObject("/BaseFont"): NameObject("/Helvetica"),
+        }
+    )
+    font_ref = writer._add_object(font)
+    page[NameObject("/Resources")] = DictionaryObject(
+        {NameObject("/Font"): DictionaryObject({NameObject("/F1"): font_ref})}
+    )
+    content = DecodedStreamObject()
+    content.set_data(
+        b"BT /F1 18 Tf 72 720 Td (PDF Heading) Tj 0 -30 Td (PDF body text.) Tj ET"
+    )
+    page[NameObject("/Contents")] = writer._add_object(content)
+    link = DictionaryObject(
+        {
+            NameObject("/Type"): NameObject("/Annot"),
+            NameObject("/Subtype"): NameObject("/Link"),
+            NameObject("/Rect"): ArrayObject(
+                [NumberObject(72), NumberObject(640), NumberObject(220), NumberObject(660)]
+            ),
+            NameObject("/A"): DictionaryObject(
+                {
+                    NameObject("/S"): NameObject("/URI"),
+                    NameObject("/URI"): TextStringObject("https://example.com"),
+                }
+            ),
+        }
+    )
+    page[NameObject("/Annots")] = ArrayObject([writer._add_object(link)])
+    writer.add_metadata({"/Title": "PDF Test Document"})
+    with path.open("wb") as output:
+        writer.write(output)
+
+
+def test_rejects_unsupported_input(tmp_path: Path) -> None:
+    source = tmp_path / "notes.csv"
+    source.write_text("not a supported file", encoding="utf-8")
     with pytest.raises(ValidationError, match="仅支持 DOCX"):
         ConversionService().convert(source, tmp_path)
+
+
+def test_converts_text_pdf_to_markdown_with_page_links(tmp_path: Path) -> None:
+    source = tmp_path / "report.pdf"
+    _write_text_pdf(source)
+
+    result = ConversionService().convert(source, tmp_path)
+
+    content = (result.output_path / "markdown" / "report.md").read_text(encoding="utf-8")
+    index = (result.output_path / "index.md").read_text(encoding="utf-8")
+    assert "## 第 1 页" in content
+    assert "PDF Heading" in content
+    assert "PDF body text." in content
+    assert "[https://example.com](https://example.com)" in content
+    assert "# PDF Test Document" in index
+    assert not result.warnings
+
+
+def test_blank_pdf_keeps_output_and_reports_ocr_requirement(tmp_path: Path) -> None:
+    source = tmp_path / "scan.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=612, height=792)
+    with source.open("wb") as output:
+        writer.write(output)
+
+    result = ConversionService().convert(source, tmp_path)
+
+    report = result.report_path.read_text(encoding="utf-8")
+    assert (result.output_path / "markdown" / "scan.md").is_file()
+    assert "PDF_TEXT_UNAVAILABLE" in report
+    assert "PDF_OCR_REQUIRED" in report
+
+
+def test_converts_plain_text_and_preserves_line_structure(tmp_path: Path) -> None:
+    source = tmp_path / "notes.txt"
+    source.write_text("第一行\n\n- 清单项目\n第二段", encoding="utf-8")
+
+    result = ConversionService().convert(source, tmp_path)
+
+    content = (result.output_path / "markdown" / "notes.md").read_text(encoding="utf-8")
+    assert "第一行" in content
+    assert "- 清单项目" in content
+    assert "第二段" in content
+
+
+def test_batch_discovery_includes_pdf_and_text_files(tmp_path: Path) -> None:
+    (tmp_path / "notes.txt").write_text("text", encoding="utf-8")
+    _write_text_pdf(tmp_path / "report.pdf")
+
+    assert [path.suffix for path in discover_sources(tmp_path)] == [".txt", ".pdf"]
 
 
 def test_default_output_path_setting_round_trips_only_existing_directories(tmp_path: Path) -> None:
@@ -534,9 +633,10 @@ def test_batch_discovery_and_partial_failure_do_not_stop_other_files(tmp_path: P
     Document().save(valid)
     invalid = source_dir / "broken.docx"
     invalid.write_text("not OOXML", encoding="utf-8")
-    (source_dir / "notes.txt").write_text("ignore", encoding="utf-8")
+    notes = source_dir / "notes.txt"
+    notes.write_text("ignore", encoding="utf-8")
 
-    assert discover_sources(source_dir, recursive=False) == (invalid, valid)
+    assert discover_sources(source_dir, recursive=False) == (invalid, notes, valid)
     result = BatchConversionService().convert((invalid, valid), tmp_path)
 
     assert result.count(BatchStatus.FAILED) == 1

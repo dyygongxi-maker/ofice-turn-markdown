@@ -19,7 +19,13 @@ STATUS_TEXT = {
     BatchStatus.CANCELLED: "已取消",
 }
 
-TYPE_TEXT = {".docx": "Word", ".pptx": "PowerPoint", ".xlsx": "Excel"}
+TYPE_TEXT = {
+    ".docx": "Word",
+    ".pptx": "PowerPoint",
+    ".xlsx": "Excel",
+    ".pdf": "PDF",
+    ".txt": "文本",
+}
 
 
 class QueuePanel(ttk.Frame):

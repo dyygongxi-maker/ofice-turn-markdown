@@ -4,6 +4,9 @@
 
 ### Added
 
+- 支持本地 PDF 转 Markdown：提取可搜索文本层、页码、文档标题与 HTTP(S) 链接；扫描件或无文本层 PDF 会生成 OCR 提示报告而不伪造内容。
+- 支持 TXT 转 Markdown：支持 UTF-8、UTF-16 与 GB18030 解码，并保留空行、段落和基础列表。
+- 文件选择、文件夹扫描和队列类型标签新增 PDF 与 TXT。
 - Added a project-owned Windows application icon for the executable, installer, and generated shortcuts.
 
 ### Removed

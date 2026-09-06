@@ -6,6 +6,7 @@ from docx import Document
 from openpyxl import load_workbook
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
+from pypdf import PdfReader
 
 from .models import Asset, Block, ParsedDocument, WarningItem
 from .security import safe_name
@@ -166,6 +167,93 @@ def parse_xlsx(source: Path) -> ParsedDocument:
     return document
 
 
+def _pdf_links(page) -> list[str]:
+    links: list[str] = []
+    annotations = page.get("/Annots", [])
+    for annotation_reference in annotations:
+        annotation = annotation_reference.get_object()
+        if annotation.get("/Subtype") != "/Link":
+            continue
+        action = annotation.get("/A")
+        if not action or action.get("/S") != "/URI":
+            continue
+        uri = str(action.get("/URI", "")).strip()
+        if uri.startswith(("https://", "http://")) and uri not in links:
+            links.append(uri)
+    return links
+
+
+def parse_pdf(source: Path) -> ParsedDocument:
+    reader = PdfReader(source)
+    title = source.stem
+    if reader.metadata and reader.metadata.title:
+        title = str(reader.metadata.title).strip() or source.stem
+    document = ParsedDocument(title, "pdf")
+    if reader.is_encrypted:
+        document.warnings.append(
+            WarningItem("PDF_ENCRYPTED_UNSUPPORTED", "加密 PDF 无法提取文本。")
+        )
+        return document
+    has_text = False
+    for number, page in enumerate(reader.pages, start=1):
+        document.blocks.append(Block("page", str(number)))
+        text = (page.extract_text() or "").strip()
+        if text:
+            has_text = True
+            for paragraph in text.split("\n\n"):
+                normalized = paragraph.strip()
+                if normalized:
+                    document.blocks.append(Block("paragraph", normalized))
+        document.blocks.extend(Block("link", link) for link in _pdf_links(page))
+    if not has_text:
+        document.warnings.extend(
+            (
+                WarningItem("PDF_TEXT_UNAVAILABLE", "PDF 未检测到可提取文本。"),
+                WarningItem(
+                    "PDF_OCR_REQUIRED", "该 PDF 可能是扫描件，请先使用 OCR 生成可搜索文本。"
+                ),
+            )
+        )
+    return document
+
+
+def parse_txt(source: Path) -> ParsedDocument:
+    content = None
+    fallback_encoding = None
+    for encoding in ("utf-8-sig", "utf-16", "gb18030"):
+        try:
+            content = source.read_text(encoding=encoding)
+            fallback_encoding = encoding if encoding != "utf-8-sig" else None
+            break
+        except UnicodeDecodeError:
+            continue
+    if content is None:
+        raise ValueError("TXT 文件编码无法识别。")
+    document = ParsedDocument(source.stem, "txt")
+    if fallback_encoding:
+        document.warnings.append(
+            WarningItem("TXT_ENCODING_FALLBACK", f"TXT 使用 {fallback_encoding.upper()} 解码。")
+        )
+    for paragraph in content.replace("\r\n", "\n").replace("\r", "\n").split("\n\n"):
+        for line in paragraph.split("\n"):
+            text = line.strip()
+            if not text:
+                continue
+            if text.startswith("# "):
+                document.blocks.append(Block("heading", text[2:], 1))
+            elif text.startswith(("- ", "* ", "+ ")):
+                document.blocks.append(Block("list", text[2:]))
+            else:
+                document.blocks.append(Block("paragraph", text))
+    return document
+
+
 def parse_source(source: Path) -> ParsedDocument:
-    parsers = {".docx": parse_docx, ".pptx": parse_pptx, ".xlsx": parse_xlsx}
+    parsers = {
+        ".docx": parse_docx,
+        ".pptx": parse_pptx,
+        ".xlsx": parse_xlsx,
+        ".pdf": parse_pdf,
+        ".txt": parse_txt,
+    }
     return parsers[source.suffix.lower()](source)

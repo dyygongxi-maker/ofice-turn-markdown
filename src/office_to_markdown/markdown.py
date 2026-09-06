@@ -17,6 +17,8 @@ def render_blocks(blocks: list[Block], asset_prefix: str = "assets") -> str:
             lines.extend(["#" * max(1, min(6, block.level or 1)) + " " + block.text.strip(), ""])
         elif block.kind == "slide":
             lines.extend([f"## 第 {block.text} 页", ""])
+        elif block.kind == "page":
+            lines.extend([f"## 第 {block.text} 页", ""])
         elif block.kind == "paragraph":
             lines.extend([block.text.strip(), ""])
         elif block.kind == "quote":
@@ -38,6 +40,8 @@ def render_blocks(blocks: list[Block], asset_prefix: str = "assets") -> str:
             lines.extend(
                 [f"![{block.text or block.asset_name}]({asset_prefix}/{block.asset_name})", ""]
             )
+        elif block.kind == "link":
+            lines.extend([f"[{block.text}]({block.text})", ""])
     return "\n".join(lines).strip() + "\n"
 
 

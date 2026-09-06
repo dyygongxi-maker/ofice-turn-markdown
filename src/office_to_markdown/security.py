@@ -4,12 +4,15 @@ import re
 import zipfile
 from pathlib import Path
 
+from pypdf import PdfReader
+from pypdf.errors import PdfReadError
+
 
 class ValidationError(ValueError):
     pass
 
 
-ALLOWED_SUFFIXES = {".docx", ".pptx", ".xlsx"}
+ALLOWED_SUFFIXES = {".docx", ".pptx", ".xlsx", ".pdf", ".txt"}
 REQUIRED_PARTS = {
     ".docx": "word/document.xml",
     ".pptx": "ppt/presentation.xml",
@@ -29,10 +32,16 @@ def safe_name(value: str, fallback: str = "document") -> str:
 def validate_input(source: Path) -> None:
     if not source.is_file():
         raise ValidationError("所选文件不存在。")
-    if source.suffix.lower() not in ALLOWED_SUFFIXES:
-        raise ValidationError("仅支持 DOCX、PPTX 和 XLSX 文件。")
+    suffix = source.suffix.lower()
+    if suffix not in ALLOWED_SUFFIXES:
+        raise ValidationError("仅支持 DOCX、PPTX、XLSX、PDF 和 TXT 文件。")
     if source.stat().st_size > MAX_COMPRESSED_BYTES:
         raise ValidationError("所选文件超过配置的大小限制。")
+    if suffix == ".txt":
+        return
+    if suffix == ".pdf":
+        _validate_pdf(source)
+        return
     try:
         with zipfile.ZipFile(source) as archive:
             entries = archive.infolist()
@@ -52,6 +61,16 @@ def validate_input(source: Path) -> None:
                 raise ValidationError("不接受包含宏的文件。")
     except zipfile.BadZipFile as error:
         raise ValidationError("所选文件不是可读取的 OOXML 文件包。") from error
+
+
+def _validate_pdf(source: Path) -> None:
+    try:
+        with source.open("rb") as file:
+            if file.read(5) != b"%PDF-":
+                raise ValidationError("所选文件不是可读取的 PDF 文件。")
+        PdfReader(source)
+    except (OSError, PdfReadError) as error:
+        raise ValidationError("所选文件不是可读取的 PDF 文件。") from error
 
 
 def ensure_output_parent(path: Path) -> None:
