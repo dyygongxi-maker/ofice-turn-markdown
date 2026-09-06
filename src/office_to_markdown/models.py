@@ -45,6 +45,11 @@ class ConversionResult:
     warnings: tuple[WarningItem, ...]
 
 
+class OutputFormat(StrEnum):
+    MARKDOWN = "markdown"
+    JSON = "json"
+
+
 @dataclass(frozen=True)
 class ConversionOptions:
     obsidian_mode: bool = False
@@ -55,6 +60,7 @@ class ConversionOptions:
     copy_source: bool = False
     export_pptx_png: bool = False
     export_pptx_pdf: bool = False
+    output_format: OutputFormat = OutputFormat.MARKDOWN
 
 
 class BatchStatus(StrEnum):

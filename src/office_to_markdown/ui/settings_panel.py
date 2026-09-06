@@ -46,23 +46,33 @@ class SettingsPanel(ttk.Frame):
             self, text="设为默认", command=self._save_default, style="Secondary.TButton"
         ).grid(row=3, column=0, sticky="w", pady=(8, 16))
 
-        ttk.Separator(self).grid(row=4, column=0, sticky="ew")
+        ttk.Label(self, text="输出格式", style="Body.TLabel").grid(
+            row=4, column=0, sticky="w", pady=(0, 4)
+        )
+        ttk.Combobox(
+            self,
+            textvariable=self.state.output_format,
+            values=("Markdown", "JSON"),
+            state="readonly",
+        ).grid(row=5, column=0, sticky="ew", pady=(0, 16))
+
+        ttk.Separator(self).grid(row=6, column=0, sticky="ew")
         check = ttk.Checkbutton(self, text="启用 Obsidian 归档", variable=self.state.obsidian)
-        check.grid(row=5, column=0, sticky="w", pady=(16, 8))
+        check.grid(row=7, column=0, sticky="w", pady=(16, 8))
         self._obsidian_controls.append(check)
 
         ttk.Label(self, text="标签（逗号分隔）", style="Body.TLabel").grid(
-            row=6, column=0, sticky="w", pady=(0, 4)
+            row=8, column=0, sticky="w", pady=(0, 4)
         )
         tags = ttk.Entry(self, textvariable=self.state.tags)
-        tags.grid(row=7, column=0, sticky="ew")
+        tags.grid(row=9, column=0, sticky="ew")
         self._obsidian_controls.append(tags)
 
         ttk.Label(self, text="Vault 根目录", style="Body.TLabel").grid(
-            row=8, column=0, sticky="w", pady=(10, 4)
+            row=10, column=0, sticky="w", pady=(10, 4)
         )
         vault = ttk.Frame(self, style="Panel.TFrame")
-        vault.grid(row=9, column=0, sticky="ew")
+        vault.grid(row=11, column=0, sticky="ew")
         vault.columnconfigure(0, weight=1)
         vault_entry = ttk.Entry(vault, textvariable=self.state.vault_root)
         vault_entry.grid(row=0, column=0, sticky="ew")
@@ -70,25 +80,25 @@ class SettingsPanel(ttk.Frame):
         vault_button.grid(row=0, column=1, padx=(8, 0))
         self._obsidian_controls.extend((vault_entry, vault_button))
         for row, text, variable in (
-            (10, "添加原文件链接", self.state.include_source_link),
-            (11, "复制原文件到输出目录", self.state.copy_source),
+            (12, "添加原文件链接", self.state.include_source_link),
+            (13, "复制原文件到输出目录", self.state.copy_source),
         ):
             control = ttk.Checkbutton(self, text=text, variable=variable)
             control.grid(row=row, column=0, sticky="w", pady=(8, 0))
             self._obsidian_controls.append(control)
 
-        ttk.Separator(self).grid(row=12, column=0, sticky="ew", pady=(16, 0))
+        ttk.Separator(self).grid(row=14, column=0, sticky="ew", pady=(16, 0))
         ttk.Label(self, text="PPTX 视觉附件", style="Heading.TLabel").grid(
-            row=13, column=0, sticky="w", pady=(16, 4)
+            row=15, column=0, sticky="w", pady=(16, 4)
         )
         ttk.Checkbutton(self, text="导出每页 PNG", variable=self.state.export_pptx_png).grid(
-            row=14, column=0, sticky="w"
+            row=16, column=0, sticky="w"
         )
         ttk.Label(self, text="WPS 演示优先，PowerPoint 后备", style="Muted.TLabel").grid(
-            row=15, column=0, sticky="w", padx=(24, 0), pady=(0, 6)
+            row=17, column=0, sticky="w", padx=(24, 0), pady=(0, 6)
         )
         ttk.Checkbutton(self, text="导出版式 PDF", variable=self.state.export_pptx_pdf).grid(
-            row=16, column=0, sticky="w"
+            row=18, column=0, sticky="w"
         )
 
     def set_editable(self, editable: bool) -> None:

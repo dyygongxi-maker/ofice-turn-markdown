@@ -3,7 +3,7 @@ from __future__ import annotations
 import tkinter as tk
 from pathlib import Path
 
-from office_to_markdown.models import BatchItem, BatchStatus, ConversionResult
+from office_to_markdown.models import BatchItem, BatchStatus, ConversionResult, OutputFormat
 from office_to_markdown.ui.state import UiPhase, UiState
 
 
@@ -16,6 +16,7 @@ def test_ui_state_defaults_and_option_mapping(tmp_path: Path) -> None:
 
     assert state.phase is UiPhase.IDLE
     assert state.recursive.get() is False
+    assert state.output_format.get() == "Markdown"
     assert state.can_start is False
 
     state.sources.append(tmp_path / "source.docx")
@@ -25,6 +26,7 @@ def test_ui_state_defaults_and_option_mapping(tmp_path: Path) -> None:
     state.copy_source.set(True)
     state.export_pptx_png.set(True)
     state.export_pptx_pdf.set(True)
+    state.output_format.set(OutputFormat.JSON)
     state.vault_root.set(str(vault))
 
     options = state.build_options()
@@ -37,6 +39,7 @@ def test_ui_state_defaults_and_option_mapping(tmp_path: Path) -> None:
     assert options.copy_source is True
     assert options.export_pptx_png is True
     assert options.export_pptx_pdf is True
+    assert options.output_format is OutputFormat.JSON
 
 
 def test_ui_state_owns_ordered_sources_results_and_phases(tmp_path: Path) -> None:

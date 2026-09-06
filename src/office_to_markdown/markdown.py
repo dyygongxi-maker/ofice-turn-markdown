@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .models import Block, ConversionOptions, ParsedDocument, WarningItem
+from .models import Block, ConversionOptions, OutputFormat, ParsedDocument, WarningItem
 from .security import safe_name
 
 
@@ -74,11 +74,14 @@ def render_index(
     source_link: str | None = None,
     has_pptx_png: bool = False,
     has_pptx_pdf: bool = False,
+    output_format: OutputFormat = OutputFormat.MARKDOWN,
 ) -> str:
     lines = render_frontmatter(source, document, options, source_link) if source and options else []
     output_name = safe_name(source.stem if source else document.title)
     lines.extend([f"# {document.title}", "", f"源文件格式：`{document.format.upper()}`", ""])
-    if document.format == "xlsx":
+    if output_format is OutputFormat.JSON:
+        lines.append(f"- [转换结果](json/{output_name}.json)")
+    elif document.format == "xlsx":
         lines.extend([f"- [转换内容](markdown/{output_name}.md)", "", "## 工作表", ""])
         for sheet_name in document.sheets:
             lines.append(f"- [{sheet_name}](markdown/sheets/{safe_name(sheet_name)}.md)")
@@ -102,11 +105,14 @@ def render_workbook_entry(document: ParsedDocument) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_report(document: ParsedDocument) -> str:
+def render_report(
+    document: ParsedDocument, output_format: OutputFormat = OutputFormat.MARKDOWN
+) -> str:
     lines = [
         "# 转换报告",
         "",
         f"- 源文件格式：`{document.format.upper()}`",
+        f"- 输出格式：`{output_format.upper()}`",
         f"- 导出资源数量：{len(document.assets)}",
         "",
     ]

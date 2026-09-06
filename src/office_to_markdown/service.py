@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 
 from .adapters import parse_source
+from .json_output import render_json
 from .markdown import (
     render_blocks,
     render_index,
@@ -14,7 +15,7 @@ from .markdown import (
     render_workbook_entry,
     warning_codes,
 )
-from .models import ConversionOptions, ConversionResult, WarningItem
+from .models import ConversionOptions, ConversionResult, OutputFormat, ParsedDocument, WarningItem
 from .security import (
     ValidationError,
     ensure_output_parent,
@@ -45,7 +46,7 @@ class ConversionService:
                 raise ValidationError("请指定 Obsidian 归档根目录以生成原文件链接。")
             relative_source_path(source, options.source_link_root)
         document = parse_source(source)
-        final_path = output_parent / f"{safe_name(source.stem)}-markdown"
+        final_path = output_parent / f"{safe_name(source.stem)}-{options.output_format}"
         if final_path.exists():
             raise ValidationError("输出目录已存在。请选择其他输出目录，或重命名源文件后再试。")
         staging = Path(tempfile.mkdtemp(prefix=f".{safe_name(source.stem)}-", dir=output_parent))
@@ -53,8 +54,6 @@ class ConversionService:
             if options.include_source_link:
                 source_link = Path(os.path.relpath(source, final_path)).as_posix()
             (staging / "assets").mkdir()
-            markdown_dir = staging / "markdown"
-            markdown_dir.mkdir()
             reports_dir = staging / "reports"
             reports_dir.mkdir()
             output_name = safe_name(source.stem)
@@ -89,25 +88,22 @@ class ConversionService:
                     source_link,
                     has_pptx_png,
                     has_pptx_pdf,
+                    options.output_format,
                 ),
                 encoding="utf-8",
             )
-            if document.format == "xlsx":
-                sheets = markdown_dir / "sheets"
-                sheets.mkdir()
-                for name, blocks in document.sheets.items():
-                    (sheets / f"{safe_name(name)}.md").write_text(
-                        render_blocks(blocks, "../../assets"), encoding="utf-8"
-                    )
-                (markdown_dir / f"{output_name}.md").write_text(
-                    render_workbook_entry(document), encoding="utf-8"
+            if options.output_format is OutputFormat.JSON:
+                json_dir = staging / "json"
+                json_dir.mkdir()
+                (json_dir / f"{output_name}.json").write_text(
+                    render_json(document), encoding="utf-8"
                 )
             else:
-                (markdown_dir / f"{output_name}.md").write_text(
-                    render_blocks(document.blocks, "../assets"), encoding="utf-8"
-                )
+                self._write_markdown(document, staging / "markdown", output_name)
             report_path = reports_dir / f"{output_name}转换报告.md"
-            report_path.write_text(render_report(document), encoding="utf-8")
+            report_path.write_text(
+                render_report(document, options.output_format), encoding="utf-8"
+            )
             if options.copy_source:
                 originals = staging / "originals"
                 originals.mkdir()
@@ -115,6 +111,7 @@ class ConversionService:
             manifest = {
                 "source_name": source.name,
                 "source_format": document.format,
+                "output_format": options.output_format,
                 "warning_codes": warning_codes(document.warnings),
                 "asset_count": len(document.assets),
                 "obsidian_mode": options.obsidian_mode,
@@ -130,3 +127,21 @@ class ConversionService:
             final_path, final_path / "reports" / f"{safe_name(source.stem)}转换报告.md",
             tuple(document.warnings),
         )
+
+    @staticmethod
+    def _write_markdown(document: ParsedDocument, markdown_dir: Path, output_name: str) -> None:
+        markdown_dir.mkdir()
+        if document.format == "xlsx":
+            sheets = markdown_dir / "sheets"
+            sheets.mkdir()
+            for name, blocks in document.sheets.items():
+                (sheets / f"{safe_name(name)}.md").write_text(
+                    render_blocks(blocks, "../../assets"), encoding="utf-8"
+                )
+            (markdown_dir / f"{output_name}.md").write_text(
+                render_workbook_entry(document), encoding="utf-8"
+            )
+        else:
+            (markdown_dir / f"{output_name}.md").write_text(
+                render_blocks(document.blocks, "../assets"), encoding="utf-8"
+            )

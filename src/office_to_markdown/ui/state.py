@@ -4,7 +4,7 @@ import tkinter as tk
 from enum import StrEnum
 from pathlib import Path
 
-from ..models import BatchItem, BatchResult, ConversionOptions
+from ..models import BatchItem, BatchResult, ConversionOptions, OutputFormat
 from ..security import ValidationError, validate_tags
 
 
@@ -29,6 +29,7 @@ class UiState:
         self.copy_source = tk.BooleanVar(master, False)
         self.export_pptx_png = tk.BooleanVar(master, False)
         self.export_pptx_pdf = tk.BooleanVar(master, False)
+        self.output_format = tk.StringVar(master, "Markdown")
         self.sources: list[Path] = []
         self.results: dict[str, BatchItem] = {}
         self.selected_key: str | None = None
@@ -89,4 +90,5 @@ class UiState:
             copy_source=self.copy_source.get(),
             export_pptx_png=self.export_pptx_png.get(),
             export_pptx_pdf=self.export_pptx_pdf.get(),
+            output_format=OutputFormat(self.output_format.get().lower()),
         )

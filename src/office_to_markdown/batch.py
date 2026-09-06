@@ -47,7 +47,8 @@ class BatchConversionService:
                 if on_item:
                     on_item(item)
                 continue
-            if (output_parent / f"{safe_name(source.stem)}-markdown").exists():
+            output_format = (options or ConversionOptions()).output_format
+            if (output_parent / f"{safe_name(source.stem)}-{output_format}").exists():
                 item = BatchItem(
                     source,
                     BatchStatus.SKIPPED,

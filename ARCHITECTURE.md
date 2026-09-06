@@ -8,7 +8,7 @@
 
 - 本地优先：文件内容只在用户设备上处理。
 - 语义优先：输出面向知识检索和 AI，不追求页面像素级还原。
-- 解析与输出解耦：所有格式适配器先生成统一中间文档模型，再由渲染器生成 Markdown。
+- 解析与输出解耦：所有格式适配器先生成统一中间文档模型，再由输出渲染器生成 Markdown 或 JSON。
 
 ## 目标模块
 
@@ -18,7 +18,7 @@ Tkinter desktop UI
   -> input and archive validation
   -> format adapter (DOCX | PPTX | XLSX | PDF | TXT)
   -> normalized document model
-  -> Markdown renderer + asset exporter + optional WPS-first visual exporter
+  -> Markdown/JSON renderer + asset exporter + optional WPS-first visual exporter
   -> staging output writer + conversion report
 ```
 
@@ -26,7 +26,7 @@ Tkinter desktop UI
 
 - 输入：用户明确选取的单个本地文件。
 - 临时数据：仅在项目配置的临时目录中存在，转换结束后清理。
-- 输出：用户选择的本地目录；包含 Markdown、资源、报告，以及可选的 PPT 页面预览和 PDF。
+- 输出：用户选择的本地目录；包含用户选择的 Markdown 或 JSON、资源、报告，以及可选的 PPT 页面预览和 PDF。
 - 网络：MVP 运行时不发起外部网络请求。
 
 ## 实际技术栈
@@ -47,7 +47,7 @@ Tkinter desktop UI
 scripts/build.ps1
   -> dist/廾匸转换/                 # 可运行目录包
   -> installer/office-to-markdown.iss
-  -> release/廾匸转换-Setup-0.3.0.exe
+  -> release/廾匸转换-Setup-0.4.0.exe
   -> %LocalAppData%/Programs/廾匸转换/ # 安装后的当前用户应用
 ```
 
@@ -68,7 +68,7 @@ Format adapter
 ## 预期输出结构
 
 ```text
-<source-name>-markdown/
+<source-name>-markdown/ 或 <source-name>-json/
   index.md
   markdown/
     <source-name>.md
@@ -98,7 +98,7 @@ Tkinter 主线程
 ```
 
 - `ConversionService` 保持单文件解析、暂存与原子发布边界；批处理服务只负责扫描、调度、状态和汇总。
-- 新增 `ConversionOptions` 承载可选 Obsidian 输出，不改变默认 Markdown 协议。
+- `ConversionOptions` 承载可选 Obsidian 输出和受控输出格式；默认 Markdown 协议保持不变，JSON 使用独立输出目录。
 - UI 不直接访问解析器；后台线程只回传事件，所有 Tkinter 控件在主线程更新。
 - 桌面界面使用 Windows 原生标题栏提供窗口缩放、吸附和窗口控制；导入卡、输出规则卡、文件行和底部操作栏由 Tkinter Canvas 呈现，输入框以 Canvas 嵌入原生 Entry 保持文本输入能力。队列状态由 `BatchStatus` 映射为自绘的状态胶囊和进度条，不改变领域状态合同。
 - 默认 `1280x800` 布局将输出规则组织为左右两栏，队列使用独立的 `tk.Canvas` 视口并配套滚动条，底部操作栏固定；卡片高度与操作栏位置由响应式几何约束计算，并由源码回归断言保护，避免文件行覆盖操作按钮。

@@ -1,6 +1,8 @@
 import base64
+import json
 import zipfile
 from pathlib import Path
+from tkinter import ttk
 
 import pytest
 from docx import Document
@@ -21,7 +23,7 @@ from office_to_markdown import adapters
 from office_to_markdown.adapters import parse_pptx, unsupported_pptx_shape_types
 from office_to_markdown.app import MainWindow
 from office_to_markdown.batch import BatchConversionService, BatchStatus, discover_sources
-from office_to_markdown.models import BatchItem, ConversionOptions, ConversionResult
+from office_to_markdown.models import BatchItem, ConversionOptions, ConversionResult, OutputFormat
 from office_to_markdown.security import ValidationError
 from office_to_markdown.service import ConversionService
 from office_to_markdown.settings import SettingsStore
@@ -173,8 +175,8 @@ def test_windows_installer_defines_a_per_user_desktop_release() -> None:
     assert '#define MyAppName "廾匸转换"' in installer
     assert 'AppName={#MyAppName}' in installer
     assert 'DefaultDirName={localappdata}\\Programs\\廾匸转换' in installer
-    assert 'OutputBaseFilename=廾匸转换-Setup-0.3.0' in installer
-    assert 'version = "0.3.0"' in package_metadata
+    assert 'OutputBaseFilename=廾匸转换-Setup-0.4.0' in installer
+    assert 'version = "0.4.0"' in package_metadata
     assert 'Source: "..\\dist\\廾匸转换\\*"; DestDir: "{app}"' in installer
     assert 'Name: "{autodesktop}\\廾匸转换"' in installer
     assert 'Name: "{group}\\廾匸转换"' in installer
@@ -279,6 +281,48 @@ def test_converts_docx_to_markdown(tmp_path: Path) -> None:
     assert result.report_path == result.output_path / "reports" / "brief转换报告.md"
     assert "# Project Brief" in content
     assert "| Name | Value |" in content
+
+
+def test_converts_word_to_structured_json_when_selected(tmp_path: Path) -> None:
+    source = tmp_path / "brief.docx"
+    document = Document()
+    document.add_heading("Project Brief", level=1)
+    document.add_paragraph("A local JSON conversion test.")
+    table = document.add_table(rows=2, cols=2)
+    table.cell(0, 0).text = "Name"
+    table.cell(0, 1).text = "Value"
+    table.cell(1, 0).text = "Mode"
+    table.cell(1, 1).text = "Local"
+    document.save(source)
+
+    result = ConversionService().convert(
+        source, tmp_path, ConversionOptions(output_format=OutputFormat.JSON)
+    )
+
+    json_path = result.output_path / "json" / "brief.json"
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    index = (result.output_path / "index.md").read_text(encoding="utf-8")
+    report = result.report_path.read_text(encoding="utf-8")
+    assert result.output_path.name == "brief-json"
+    assert payload["source_format"] == "docx"
+    assert payload["title"] == "Project Brief"
+    assert payload["blocks"][0] == {"kind": "heading", "level": 1, "text": "Project Brief"}
+    assert payload["blocks"][2]["rows"] == [["Name", "Value"], ["Mode", "Local"]]
+    assert "[转换结果](json/brief.json)" in index
+    assert "- 输出格式：`JSON`" in report
+
+
+def test_batch_uses_selected_output_format_when_checking_existing_output(tmp_path: Path) -> None:
+    source = tmp_path / "brief.docx"
+    Document().save(source)
+    options = ConversionOptions(output_format=OutputFormat.JSON)
+
+    first = BatchConversionService().convert((source,), tmp_path, options)
+    second = BatchConversionService().convert((source,), tmp_path, options)
+
+    assert first.items[0].status is BatchStatus.SUCCESS
+    assert second.items[0].status is BatchStatus.SKIPPED
+    assert (tmp_path / "brief-json" / "json" / "brief.json").is_file()
 
 
 def test_stores_named_markdown_and_report_in_separate_directories(tmp_path: Path) -> None:
@@ -675,6 +719,13 @@ def test_desktop_ui_interactions_and_responsive_layout(tmp_path: Path) -> None:
         assert window.queue_panel.tree.winfo_height() > 0
         assert window.settings_panel.winfo_height() > 0
         assert window.status_bar.winfo_height() > 0
+        output_format_controls = [
+            child
+            for child in window.settings_panel.winfo_children()
+            if isinstance(child, ttk.Combobox)
+        ]
+        assert len(output_format_controls) == 1
+        assert output_format_controls[0].cget("values") == ("Markdown", "JSON")
         window.root.geometry("1040x760")
         window.root.update()
         assert window.root.winfo_width() >= 1040

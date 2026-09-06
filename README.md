@@ -1,6 +1,6 @@
 # 廾匸转换
 
-在 Windows 本机将 Word、PowerPoint、Excel、PDF 和 TXT 文件转换为适合知识库与 AI 阅读的 Markdown。
+在 Windows 本机将 Word、PowerPoint、Excel、PDF 和 TXT 文件转换为适合知识库与 AI 阅读的 Markdown 或 JSON。
 
 项目提供本地 Windows MVP；文件不会上传到网络。
 
@@ -11,7 +11,7 @@
 .\.venv-ui\Scripts\python.exe -m office_to_markdown
 ```
 
-选择一个 `.docx`、`.pptx`、`.xlsx`、`.pdf` 或 `.txt` 文件和一个已有的空输出父目录。工具会创建同名的 `-markdown` 输出目录；正文位于 `markdown/<文件名>.md`，报告位于 `reports/<文件名>转换报告.md`。XLSX 还会在 `markdown/sheets/` 下保留逐工作表文件。
+选择一个 `.docx`、`.pptx`、`.xlsx`、`.pdf` 或 `.txt` 文件和一个已有的空输出父目录。在“输出格式”中选择 Markdown（默认）或 JSON。Markdown 会创建同名的 `-markdown` 输出目录，正文位于 `markdown/<文件名>.md`；JSON 会创建 `-json` 输出目录，正文位于 `json/<文件名>.json`。两者的报告都位于 `reports/<文件名>转换报告.md`。XLSX 的 Markdown 输出还会在 `markdown/sheets/` 下保留逐工作表文件。
 
 PDF 仅提取已有的可搜索文本层、页码和 HTTP(S) 链接。扫描件或没有文本层的 PDF 不会被 OCR，仍会生成 Markdown 与转换报告，并提示先使用 OCR 生成可搜索文本。TXT 读取 UTF-8、UTF-16 或 GB18030 编码，并转换基础段落和列表。
 
@@ -33,7 +33,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\package-installer.ps1
 ```
 
-生成的单文件安装程序位于 `release\廾匸转换-Setup-0.3.0.exe`。安装默认只作用于当前 Windows 用户，安装到 `%LocalAppData%\Programs\廾匸转换`；安装向导会创建开始菜单入口，并可选创建桌面快捷方式，系统“已安装的应用”中可卸载。
+生成的单文件安装程序位于 `release\廾匸转换-Setup-0.4.0.exe`。安装默认只作用于当前 Windows 用户，安装到 `%LocalAppData%\Programs\廾匸转换`；安装向导会创建开始菜单入口，并可选创建桌面快捷方式，系统“已安装的应用”中可卸载。
 
 ## 文档
 
