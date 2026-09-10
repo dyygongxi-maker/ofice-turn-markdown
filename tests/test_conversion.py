@@ -93,6 +93,28 @@ def test_converts_text_pdf_to_markdown_with_page_links(tmp_path: Path) -> None:
     assert not result.warnings
 
 
+def test_converts_text_pdf_to_structured_json_with_page_links(tmp_path: Path) -> None:
+    source = tmp_path / "report.pdf"
+    _write_text_pdf(source)
+
+    result = ConversionService().convert(
+        source, tmp_path, ConversionOptions(output_format=OutputFormat.JSON)
+    )
+
+    payload = json.loads((result.output_path / "json" / "report.json").read_text(encoding="utf-8"))
+    index = (result.output_path / "index.md").read_text(encoding="utf-8")
+    assert result.output_path.name == "report-json"
+    assert payload["source_format"] == "pdf"
+    assert payload["title"] == "PDF Test Document"
+    assert payload["blocks"] == [
+        {"kind": "page", "text": "1"},
+        {"kind": "paragraph", "text": "PDF Heading\nPDF body text."},
+        {"kind": "link", "text": "https://example.com"},
+    ]
+    assert payload["warnings"] == []
+    assert "[转换结果](json/report.json)" in index
+
+
 def test_blank_pdf_keeps_output_and_reports_ocr_requirement(tmp_path: Path) -> None:
     source = tmp_path / "scan.pdf"
     writer = PdfWriter()
