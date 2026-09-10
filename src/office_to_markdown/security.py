@@ -12,7 +12,7 @@ class ValidationError(ValueError):
     pass
 
 
-ALLOWED_SUFFIXES = {".docx", ".pptx", ".xlsx", ".pdf", ".txt"}
+ALLOWED_SUFFIXES = {".docx", ".pptx", ".xlsx", ".pdf", ".txt", ".csv", ".md", ".json"}
 REQUIRED_PARTS = {
     ".docx": "word/document.xml",
     ".pptx": "ppt/presentation.xml",
@@ -34,10 +34,10 @@ def validate_input(source: Path) -> None:
         raise ValidationError("所选文件不存在。")
     suffix = source.suffix.lower()
     if suffix not in ALLOWED_SUFFIXES:
-        raise ValidationError("仅支持 DOCX、PPTX、XLSX、PDF 和 TXT 文件。")
+        raise ValidationError("仅支持 DOCX、PPTX、XLSX、PDF、TXT、CSV、Markdown 和 JSON 文件。")
     if source.stat().st_size > MAX_COMPRESSED_BYTES:
         raise ValidationError("所选文件超过配置的大小限制。")
-    if suffix == ".txt":
+    if suffix in {".txt", ".csv", ".md", ".json"}:
         return
     if suffix == ".pdf":
         _validate_pdf(source)

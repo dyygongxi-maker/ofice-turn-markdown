@@ -71,10 +71,156 @@ def _write_text_pdf(path: Path) -> None:
 
 
 def test_rejects_unsupported_input(tmp_path: Path) -> None:
-    source = tmp_path / "notes.csv"
+    source = tmp_path / "notes.rtf"
     source.write_text("not a supported file", encoding="utf-8")
     with pytest.raises(ValidationError, match="仅支持 DOCX"):
         ConversionService().convert(source, tmp_path)
+
+
+def test_converts_csv_to_markdown_and_json(tmp_path: Path) -> None:
+    source = tmp_path / "ledger.csv"
+    source.write_text("项目,金额\n会员,12\n", encoding="utf-8")
+
+    markdown_result = ConversionService().convert(source, tmp_path)
+    json_result = ConversionService().convert(
+        source, tmp_path, ConversionOptions(output_format=OutputFormat.JSON)
+    )
+
+    markdown = (markdown_result.output_path / "markdown" / "ledger.md").read_text(encoding="utf-8")
+    json_path = json_result.output_path / "json" / "ledger.json"
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    assert "| 项目 | 金额 |" in markdown
+    assert "| 会员 | 12 |" in markdown
+    assert payload["source_format"] == "csv"
+    assert payload["blocks"] == [{"kind": "table", "rows": [["项目", "金额"], ["会员", "12"]]}]
+
+
+def test_csv_preserves_quoted_newlines(tmp_path: Path) -> None:
+    source = tmp_path / "notes.csv"
+    source.write_text('项目,备注\n会员,"第一行\n第二行"\n', encoding="utf-8")
+
+    result = ConversionService().convert(source, tmp_path)
+
+    content = (result.output_path / "markdown" / "notes.md").read_text(encoding="utf-8")
+    assert "第一行<br>第二行" in content
+
+
+def test_converts_markdown_to_json_and_back_to_markdown(tmp_path: Path) -> None:
+    source = tmp_path / "notes.md"
+    source.write_text(
+        "# 项目笔记\n\n## 第 1 页\n\n正文。\n\n- 待办\n\n"
+        "| 项目 | 状态 |\n| --- | --- |\n| 转换 | 完成 |\n",
+        encoding="utf-8",
+    )
+
+    json_result = ConversionService().convert(
+        source, tmp_path, ConversionOptions(output_format=OutputFormat.JSON)
+    )
+    restored_parent = tmp_path / "restored"
+    restored_parent.mkdir()
+    restored_result = ConversionService().convert(
+        json_result.output_path / "json" / "notes.json", restored_parent
+    )
+
+    json_path = json_result.output_path / "json" / "notes.json"
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    restored = (restored_result.output_path / "markdown" / "notes.md").read_text(encoding="utf-8")
+    assert payload["source_format"] == "markdown"
+    assert {block["kind"] for block in payload["blocks"]} == {
+        "heading",
+        "page",
+        "paragraph",
+        "list",
+        "table",
+    }
+    assert "# 项目笔记" in restored
+    assert "## 第 1 页" in restored
+    assert "- 待办" in restored
+    assert "| 转换 | 完成 |" in restored
+
+
+def test_json_to_markdown_preserves_adjacent_assets_and_sheets(tmp_path: Path) -> None:
+    source_root = tmp_path / "export"
+    json_dir = source_root / "json"
+    assets_dir = source_root / "assets"
+    json_dir.mkdir(parents=True)
+    assets_dir.mkdir()
+    (assets_dir / "image-1.png").write_bytes(base64.b64decode("iVBORw0KGgo="))
+    source = json_dir / "export.json"
+    source.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "title": "导出内容",
+                "source_format": "docx",
+                "blocks": [{"kind": "image", "text": "图片", "asset_name": "image-1.png"}],
+                "sheets": {"预算": [{"kind": "table", "rows": [["项目"], ["会员"]]}]},
+                "assets": [{"name": "image-1.png", "path": "assets/image-1.png"}],
+                "warnings": [
+                    {"code": "SOURCE_WARNING", "message": "来源已标记警告", "location": None}
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    output_parent = tmp_path / "output"
+    output_parent.mkdir()
+
+    result = ConversionService().convert(source, output_parent)
+
+    markdown = (result.output_path / "markdown" / "export.md").read_text(encoding="utf-8")
+    sheet = (result.output_path / "markdown" / "sheets" / "预算.md").read_text(encoding="utf-8")
+    assert "![图片](../assets/image-1.png)" in markdown
+    assert "[预算](sheets/预算.md)" in markdown
+    assert "| 项目 |" in sheet
+    assert (result.output_path / "assets" / "image-1.png").is_file()
+    assert "SOURCE_WARNING" in result.report_path.read_text(encoding="utf-8")
+
+
+def test_converts_office_documents_to_html(tmp_path: Path) -> None:
+    docx_source = tmp_path / "brief.docx"
+    document = Document()
+    document.add_heading("HTML Brief", level=1)
+    document.add_paragraph("Local document.")
+    document.save(docx_source)
+    pptx_source = tmp_path / "slides.pptx"
+    presentation = Presentation()
+    slide = presentation.slides.add_slide(presentation.slide_layouts[1])
+    slide.shapes.title.text = "HTML Slides"
+    presentation.save(pptx_source)
+    xlsx_source = tmp_path / "budget.xlsx"
+    workbook = Workbook()
+    workbook.active.append(["项目", "金额"])
+    workbook.active.append(["会员", 12])
+    workbook.save(xlsx_source)
+
+    options = ConversionOptions(output_format=OutputFormat.HTML)
+    docx_result = ConversionService().convert(docx_source, tmp_path, options)
+    pptx_result = ConversionService().convert(pptx_source, tmp_path, options)
+    xlsx_result = ConversionService().convert(xlsx_source, tmp_path, options)
+
+    docx_html = (docx_result.output_path / "html" / "brief.html").read_text(encoding="utf-8")
+    pptx_html = (pptx_result.output_path / "html" / "slides.html").read_text(encoding="utf-8")
+    xlsx_html = (xlsx_result.output_path / "html" / "budget.html").read_text(encoding="utf-8")
+    assert "<h1>HTML Brief</h1>" in docx_html
+    assert "<h2>第 1 页</h2>" in pptx_html
+    assert "<table>" in xlsx_html
+    assert "<td>会员</td>" in xlsx_html
+
+
+def test_rejects_non_office_html_output_and_unknown_json_schema(tmp_path: Path) -> None:
+    text_source = tmp_path / "notes.txt"
+    text_source.write_text("文本", encoding="utf-8")
+    invalid_json = tmp_path / "invalid.json"
+    invalid_json.write_text('{"schema_version": 2}', encoding="utf-8")
+
+    with pytest.raises(ValidationError, match="HTML"):
+        ConversionService().convert(
+            text_source, tmp_path, ConversionOptions(output_format=OutputFormat.HTML)
+        )
+    with pytest.raises(ValidationError, match="JSON"):
+        ConversionService().convert(invalid_json, tmp_path)
 
 
 def test_converts_text_pdf_to_markdown_with_page_links(tmp_path: Path) -> None:
@@ -144,9 +290,20 @@ def test_converts_plain_text_and_preserves_line_structure(tmp_path: Path) -> Non
 
 def test_batch_discovery_includes_pdf_and_text_files(tmp_path: Path) -> None:
     (tmp_path / "notes.txt").write_text("text", encoding="utf-8")
+    (tmp_path / "ledger.csv").write_text("name,value", encoding="utf-8")
+    (tmp_path / "notes.md").write_text("# notes", encoding="utf-8")
+    (tmp_path / "notes.json").write_text(
+        '{"schema_version": 1, "title": "notes", "blocks": []}', encoding="utf-8"
+    )
     _write_text_pdf(tmp_path / "report.pdf")
 
-    assert [path.suffix for path in discover_sources(tmp_path)] == [".txt", ".pdf"]
+    assert [path.suffix for path in discover_sources(tmp_path)] == [
+        ".csv",
+        ".json",
+        ".md",
+        ".txt",
+        ".pdf",
+    ]
 
 
 def test_default_output_path_setting_round_trips_only_existing_directories(tmp_path: Path) -> None:
@@ -197,8 +354,8 @@ def test_windows_installer_defines_a_per_user_desktop_release() -> None:
     assert '#define MyAppName "廾匸转换"' in installer
     assert 'AppName={#MyAppName}' in installer
     assert 'DefaultDirName={localappdata}\\Programs\\廾匸转换' in installer
-    assert 'OutputBaseFilename=廾匸转换-Setup-0.4.0' in installer
-    assert 'version = "0.4.0"' in package_metadata
+    assert 'OutputBaseFilename=廾匸转换-Setup-0.5.0' in installer
+    assert 'version = "0.5.0"' in package_metadata
     assert 'Source: "..\\dist\\廾匸转换\\*"; DestDir: "{app}"' in installer
     assert 'Name: "{autodesktop}\\廾匸转换"' in installer
     assert 'Name: "{group}\\廾匸转换"' in installer
@@ -747,7 +904,7 @@ def test_desktop_ui_interactions_and_responsive_layout(tmp_path: Path) -> None:
             if isinstance(child, ttk.Combobox)
         ]
         assert len(output_format_controls) == 1
-        assert output_format_controls[0].cget("values") == ("Markdown", "JSON")
+        assert output_format_controls[0].cget("values") == ("Markdown", "JSON", "HTML")
         window.root.geometry("1040x760")
         window.root.update()
         assert window.root.winfo_width() >= 1040

@@ -41,6 +41,9 @@ def test_ui_state_defaults_and_option_mapping(tmp_path: Path) -> None:
     assert options.export_pptx_pdf is True
     assert options.output_format is OutputFormat.JSON
 
+    state.output_format.set(OutputFormat.HTML)
+    assert state.build_options().output_format is OutputFormat.HTML
+
 
 def test_ui_state_owns_ordered_sources_results_and_phases(tmp_path: Path) -> None:
     state = UiState(tk.Tcl())

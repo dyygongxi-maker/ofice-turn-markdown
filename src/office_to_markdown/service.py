@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 
 from .adapters import parse_source
+from .html_output import render_html
 from .json_output import render_json
 from .markdown import (
     render_blocks,
@@ -38,6 +39,12 @@ class ConversionService:
         validate_input(source)
         ensure_output_parent(output_parent)
         validate_tags(options.tags)
+        if options.output_format is OutputFormat.HTML and source.suffix.lower() not in {
+            ".docx",
+            ".pptx",
+            ".xlsx",
+        }:
+            raise ValidationError("HTML 输出仅支持 DOCX、PPTX 和 XLSX 文件。")
         if options.copy_source and not options.obsidian_mode:
             raise ValidationError("复制原文件仅可在 Obsidian 模式中启用。")
         source_link = None
@@ -98,6 +105,12 @@ class ConversionService:
                 (json_dir / f"{output_name}.json").write_text(
                     render_json(document), encoding="utf-8"
                 )
+            elif options.output_format is OutputFormat.HTML:
+                html_dir = staging / "html"
+                html_dir.mkdir()
+                (html_dir / f"{output_name}.html").write_text(
+                    render_html(document), encoding="utf-8"
+                )
             else:
                 self._write_markdown(document, staging / "markdown", output_name)
             report_path = reports_dir / f"{output_name}转换报告.md"
@@ -131,16 +144,21 @@ class ConversionService:
     @staticmethod
     def _write_markdown(document: ParsedDocument, markdown_dir: Path, output_name: str) -> None:
         markdown_dir.mkdir()
-        if document.format == "xlsx":
+        if document.sheets:
             sheets = markdown_dir / "sheets"
             sheets.mkdir()
             for name, blocks in document.sheets.items():
                 (sheets / f"{safe_name(name)}.md").write_text(
                     render_blocks(blocks, "../../assets"), encoding="utf-8"
                 )
-            (markdown_dir / f"{output_name}.md").write_text(
-                render_workbook_entry(document), encoding="utf-8"
-            )
+            if document.format == "xlsx":
+                content = render_workbook_entry(document)
+            else:
+                links = "\n".join(
+                    f"- [{name}](sheets/{safe_name(name)}.md)" for name in document.sheets
+                )
+                content = render_blocks(document.blocks, "../assets") + f"\n## 工作表\n\n{links}\n"
+            (markdown_dir / f"{output_name}.md").write_text(content, encoding="utf-8")
         else:
             (markdown_dir / f"{output_name}.md").write_text(
                 render_blocks(document.blocks, "../assets"), encoding="utf-8"

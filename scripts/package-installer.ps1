@@ -22,7 +22,7 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-$Installer = Join-Path $ProjectRoot "release\廾匸转换-Setup-0.4.0.exe"
+$Installer = Join-Path $ProjectRoot "release\廾匸转换-Setup-0.5.0.exe"
 if (-not (Test-Path -LiteralPath $Installer -PathType Leaf)) {
     throw "Installer build completed without producing the expected setup executable."
 }

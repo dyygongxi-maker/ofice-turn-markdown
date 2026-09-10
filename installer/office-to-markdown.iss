@@ -1,5 +1,5 @@
 #define MyAppName "廾匸转换"
-#define MyAppVersion "0.4.0"
+#define MyAppVersion "0.5.0"
 #define MyAppPublisher "廾匸转换"
 #define MyAppExeName "廾匸转换.exe"
 
@@ -12,7 +12,7 @@ DefaultDirName={localappdata}\Programs\廾匸转换
 DefaultGroupName=廾匸转换
 DisableProgramGroupPage=yes
 OutputDir=..\release
-OutputBaseFilename=廾匸转换-Setup-0.4.0
+OutputBaseFilename=廾匸转换-Setup-0.5.0
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

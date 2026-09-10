@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import csv
+import io
+import json
+import re
 from pathlib import Path
 
 from docx import Document
@@ -9,7 +13,7 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pypdf import PdfReader
 
 from .models import Asset, Block, ParsedDocument, WarningItem
-from .security import safe_name
+from .security import MAX_COMPRESSED_BYTES, ValidationError, safe_name
 
 
 def unsupported_pptx_shape_types() -> set:
@@ -218,17 +222,7 @@ def parse_pdf(source: Path) -> ParsedDocument:
 
 
 def parse_txt(source: Path) -> ParsedDocument:
-    content = None
-    fallback_encoding = None
-    for encoding in ("utf-8-sig", "utf-16", "gb18030"):
-        try:
-            content = source.read_text(encoding=encoding)
-            fallback_encoding = encoding if encoding != "utf-8-sig" else None
-            break
-        except UnicodeDecodeError:
-            continue
-    if content is None:
-        raise ValueError("TXT 文件编码无法识别。")
+    content, fallback_encoding = _read_text(source)
     document = ParsedDocument(source.stem, "txt")
     if fallback_encoding:
         document.warnings.append(
@@ -248,6 +242,249 @@ def parse_txt(source: Path) -> ParsedDocument:
     return document
 
 
+def _read_text(source: Path) -> tuple[str, str | None]:
+    for encoding in ("utf-8-sig", "utf-16", "gb18030"):
+        try:
+            content = source.read_text(encoding=encoding)
+            return content, encoding if encoding != "utf-8-sig" else None
+        except UnicodeDecodeError:
+            continue
+    raise ValidationError("文本文件编码无法识别。")
+
+
+def parse_csv(source: Path) -> ParsedDocument:
+    content, fallback_encoding = _read_text(source)
+    try:
+        dialect = csv.Sniffer().sniff(content[:8192], delimiters=",;\t")
+    except csv.Error:
+        dialect = csv.excel
+    try:
+        rows = list(csv.reader(io.StringIO(content, newline=""), dialect))
+    except csv.Error as error:
+        raise ValidationError("CSV 文件无法解析。") from error
+    if not rows:
+        raise ValidationError("CSV 文件不包含可转换的行。")
+    if len(rows) > 100_000 or any(len(row) > 1_000 for row in rows):
+        raise ValidationError("CSV 文件行数或列数超过限制。")
+    document = ParsedDocument(source.stem, "csv", [Block("table", rows=rows)])
+    if fallback_encoding:
+        document.warnings.append(
+            WarningItem("CSV_ENCODING_FALLBACK", f"CSV 使用 {fallback_encoding.upper()} 解码。")
+        )
+    return document
+
+
+def _table_cells(line: str) -> list[str]:
+    value = line.strip()
+    if value.startswith("|"):
+        value = value[1:]
+    if value.endswith("|"):
+        value = value[:-1]
+    return [cell.strip().replace("\\|", "|").replace("\\\\", "\\") for cell in value.split("|")]
+
+
+def _is_table_divider(line: str) -> bool:
+    cells = _table_cells(line)
+    return bool(cells) and all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells)
+
+
+def parse_markdown(source: Path) -> ParsedDocument:
+    content, fallback_encoding = _read_text(source)
+    document = ParsedDocument(source.stem, "markdown")
+    lines = content.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    index = 0
+    in_frontmatter = False
+    while index < len(lines):
+        line = lines[index]
+        if index == 0 and line.strip() == "---":
+            in_frontmatter = True
+            index += 1
+            continue
+        if in_frontmatter:
+            if line.strip() == "---":
+                in_frontmatter = False
+            index += 1
+            continue
+        if not line.strip():
+            index += 1
+            continue
+        is_table = line.lstrip().startswith("|")
+        if is_table and index + 1 < len(lines) and _is_table_divider(lines[index + 1]):
+            rows = [_table_cells(line)]
+            index += 2
+            while index < len(lines) and lines[index].lstrip().startswith("|"):
+                rows.append(_table_cells(lines[index]))
+                index += 1
+            document.blocks.append(Block("table", rows=rows))
+            continue
+        if page := re.fullmatch(r"## 第 (\d+) 页", line.strip()):
+            document.blocks.append(Block("page", page.group(1)))
+        elif heading := re.fullmatch(r"(#{1,6})\s+(.+)", line):
+            level = len(heading.group(1))
+            text = heading.group(2).strip()
+            if level == 1 and document.title == source.stem:
+                document.title = text
+            document.blocks.append(Block("heading", text, level))
+        elif line.startswith("> "):
+            document.blocks.append(Block("quote", line[2:].strip()))
+        elif (item := re.fullmatch(r"(\s*)[-*+]\s+(.+)", line)):
+            document.blocks.append(Block("list", item.group(2).strip(), len(item.group(1)) // 2))
+        elif (link := re.fullmatch(r"\[([^\]]+)\]\((https?://[^)]+)\)", line.strip())):
+            document.blocks.append(Block("link", link.group(2).strip()))
+        elif line.lstrip().startswith("![](") or line.lstrip().startswith("!["):
+            document.warnings.append(
+                WarningItem("MARKDOWN_IMAGE_UNSUPPORTED", "Markdown 图片未导入，已跳过。")
+            )
+        else:
+            document.blocks.append(Block("paragraph", line.strip()))
+        index += 1
+    if fallback_encoding:
+        document.warnings.append(
+            WarningItem(
+                "MARKDOWN_ENCODING_FALLBACK", f"Markdown 使用 {fallback_encoding.upper()} 解码。"
+            )
+        )
+    return document
+
+
+def _json_blocks(payload: object) -> list[Block]:
+    if not isinstance(payload, list):
+        raise ValidationError("JSON 文档的 blocks 字段无效。")
+    supported = {
+        "heading",
+        "paragraph",
+        "quote",
+        "list",
+        "table",
+        "slide",
+        "page",
+        "link",
+        "image",
+    }
+    blocks: list[Block] = []
+    for item in payload:
+        if not isinstance(item, dict) or not isinstance(item.get("kind"), str):
+            raise ValidationError("JSON 文档包含无效块。")
+        kind = item["kind"]
+        if kind not in supported:
+            raise ValidationError("JSON 文档包含不支持的块类型。")
+        text = item.get("text", "")
+        level = item.get("level", 0)
+        rows = item.get("rows", [])
+        asset_name = item.get("asset_name")
+        if not isinstance(text, str) or not isinstance(level, int) or isinstance(level, bool):
+            raise ValidationError("JSON 文档块字段无效。")
+        if asset_name is not None and (
+            not isinstance(asset_name, str) or not asset_name or safe_name(asset_name) != asset_name
+        ):
+            raise ValidationError("JSON 文档资源字段无效。")
+        if kind == "image" and asset_name is None:
+            raise ValidationError("JSON 图片块缺少资源名称。")
+        rows_are_valid = isinstance(rows, list) and all(
+            isinstance(row, list) and all(isinstance(cell, str) for cell in row) for row in rows
+        )
+        if not rows_are_valid:
+            raise ValidationError("JSON 文档表格字段无效。")
+        blocks.append(Block(kind, text, level, rows, asset_name))
+    return blocks
+
+
+def _json_assets(source: Path, payload: object) -> tuple[list[Asset], set[str], list[WarningItem]]:
+    if not isinstance(payload, list):
+        raise ValidationError("JSON 文档资源字段无效。")
+    assets: list[Asset] = []
+    available_names: set[str] = set()
+    warnings: list[WarningItem] = []
+    asset_directory = source.parent.parent / "assets"
+    for item in payload:
+        if not isinstance(item, dict):
+            raise ValidationError("JSON 文档资源字段无效。")
+        name = item.get("name")
+        if not isinstance(name, str) or not name or safe_name(name) != name:
+            raise ValidationError("JSON 文档资源名称无效。")
+        if item.get("path") != f"assets/{name}":
+            raise ValidationError("JSON 文档资源路径无效。")
+        asset_path = asset_directory / name
+        if not asset_path.is_file() or asset_path.is_symlink():
+            warnings.append(WarningItem("JSON_ASSET_UNAVAILABLE", f"资源 {name} 未找到，已跳过。"))
+            continue
+        if asset_path.stat().st_size > MAX_COMPRESSED_BYTES:
+            warnings.append(
+                WarningItem("JSON_ASSET_UNAVAILABLE", f"资源 {name} 超过大小限制，已跳过。")
+            )
+            continue
+        assets.append(Asset(name, asset_path.read_bytes()))
+        available_names.add(name)
+    return assets, available_names, warnings
+
+
+def _remove_unavailable_images(
+    blocks: list[Block], available_names: set[str]
+) -> tuple[list[Block], int]:
+    filtered = [
+        block
+        for block in blocks
+        if block.kind != "image" or block.asset_name in available_names
+    ]
+    return filtered, len(blocks) - len(filtered)
+
+
+def _json_warnings(payload: object) -> list[WarningItem]:
+    if not isinstance(payload, list):
+        raise ValidationError("JSON 文档警告字段无效。")
+    warnings: list[WarningItem] = []
+    for item in payload:
+        if not isinstance(item, dict):
+            raise ValidationError("JSON 文档警告字段无效。")
+        code = item.get("code")
+        message = item.get("message")
+        location = item.get("location")
+        if (
+            not isinstance(code, str)
+            or not code
+            or not isinstance(message, str)
+            or not message
+            or (location is not None and not isinstance(location, str))
+        ):
+            raise ValidationError("JSON 文档警告字段无效。")
+        warnings.append(WarningItem(code, message, location))
+    return warnings
+
+
+def parse_json(source: Path) -> ParsedDocument:
+    try:
+        payload = json.loads(source.read_text(encoding="utf-8-sig"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValidationError("JSON 文件无法解析。") from error
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise ValidationError("仅支持 schema_version 为 1 的廾匸转换 JSON 文件。")
+    title = payload.get("title")
+    if not isinstance(title, str) or not title.strip() or len(title) > 1_000:
+        raise ValidationError("JSON 文档标题无效。")
+    assets, available_names, asset_warnings = _json_assets(source, payload.get("assets", []))
+    warnings = _json_warnings(payload.get("warnings", [])) + asset_warnings
+    blocks, skipped_images = _remove_unavailable_images(
+        _json_blocks(payload.get("blocks")), available_names
+    )
+    sheets_payload = payload.get("sheets", {})
+    if not isinstance(sheets_payload, dict) or any(
+        not isinstance(name, str) or not name for name in sheets_payload
+    ):
+        raise ValidationError("JSON 文档工作表字段无效。")
+    sheets: dict[str, list[Block]] = {}
+    for name, sheet_payload in sheets_payload.items():
+        sheet_blocks, skipped = _remove_unavailable_images(
+            _json_blocks(sheet_payload), available_names
+        )
+        sheets[name] = sheet_blocks
+        skipped_images += skipped
+    if skipped_images:
+        warnings.append(WarningItem("JSON_ASSET_UNAVAILABLE", "部分图片资源未找到，已跳过。"))
+    return ParsedDocument(
+        title.strip(), "json", blocks, sheets=sheets, assets=assets, warnings=warnings
+    )
+
+
 def parse_source(source: Path) -> ParsedDocument:
     parsers = {
         ".docx": parse_docx,
@@ -255,5 +492,8 @@ def parse_source(source: Path) -> ParsedDocument:
         ".xlsx": parse_xlsx,
         ".pdf": parse_pdf,
         ".txt": parse_txt,
+        ".csv": parse_csv,
+        ".md": parse_markdown,
+        ".json": parse_json,
     }
     return parsers[source.suffix.lower()](source)

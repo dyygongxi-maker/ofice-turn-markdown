@@ -25,6 +25,9 @@ TYPE_TEXT = {
     ".xlsx": "Excel",
     ".pdf": "PDF",
     ".txt": "文本",
+    ".csv": "CSV",
+    ".md": "Markdown",
+    ".json": "JSON",
 }
 
 

@@ -48,6 +48,7 @@ class ConversionResult:
 class OutputFormat(StrEnum):
     MARKDOWN = "markdown"
     JSON = "json"
+    HTML = "html"
 
 
 @dataclass(frozen=True)

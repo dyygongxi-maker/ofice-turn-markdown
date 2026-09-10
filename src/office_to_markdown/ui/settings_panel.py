@@ -52,7 +52,7 @@ class SettingsPanel(ttk.Frame):
         ttk.Combobox(
             self,
             textvariable=self.state.output_format,
-            values=("Markdown", "JSON"),
+            values=("Markdown", "JSON", "HTML"),
             state="readonly",
         ).grid(row=5, column=0, sticky="ew", pady=(0, 16))
 

@@ -1,12 +1,15 @@
 # Changelog
 
-## [Unreleased]
+## [0.5.0] - 2026-09-10
 
 ### Added
 
 - 新增输出格式下拉选项：默认导出 Markdown，也可选择 JSON。
 - 新增结构化 JSON 输出，Word 文档可导出标题、段落、表格、资源引用和转换警告；其他已支持格式共享同一 JSON 合同。
 - 新增 PDF JSON 回归测试，覆盖文本、页码、HTTP(S) 链接、输出路径与索引链接。
+- 新增 CSV 转 Markdown/JSON，支持 UTF-8、UTF-16、GB18030 及常见分隔符。
+- 新增 DOCX、PPTX、XLSX 转 HTML，生成安全转义的本地语义 HTML。
+- 新增 Markdown 转 JSON 与廾匸转换 `schema_version: 1` JSON 转 Markdown。
 - 支持本地 PDF 转 Markdown：提取可搜索文本层、页码、文档标题与 HTTP(S) 链接；扫描件或无文本层 PDF 会生成 OCR 提示报告而不伪造内容。
 - 支持 TXT 转 Markdown：支持 UTF-8、UTF-16 与 GB18030 解码，并保留空行、段落和基础列表。
 - 文件选择、文件夹扫描和队列类型标签新增 PDF 与 TXT。

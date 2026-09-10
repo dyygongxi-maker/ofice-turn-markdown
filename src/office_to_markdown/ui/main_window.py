@@ -67,7 +67,7 @@ class MainWindow:
         header.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 12))
         header.columnconfigure(0, weight=1)
         ttk.Label(header, text="廾匸转换", style="Title.TLabel").grid(row=0, column=0, sticky="w")
-        ttk.Label(header, text="本地文档转 Markdown", style="Body.TLabel").grid(
+        ttk.Label(header, text="本地文档转换", style="Body.TLabel").grid(
             row=1, column=0, sticky="w"
         )
         ttk.Label(header, text="本地处理，不上传文件", style="Body.TLabel").grid(
@@ -99,10 +99,13 @@ class MainWindow:
     def choose_files(self) -> None:
         selected = filedialog.askopenfilenames(
             filetypes=[
-                ("支持的文件", "*.docx *.pptx *.xlsx *.pdf *.txt"),
+                ("支持的文件", "*.docx *.pptx *.xlsx *.pdf *.txt *.csv *.md *.json"),
                 ("Office 文档", "*.docx *.pptx *.xlsx"),
                 ("PDF 文件", "*.pdf"),
                 ("文本文件", "*.txt"),
+                ("CSV 文件", "*.csv"),
+                ("Markdown 文件", "*.md"),
+                ("廾匸转换 JSON 文件", "*.json"),
             ]
         )
         self._add_sources(Path(path) for path in selected)

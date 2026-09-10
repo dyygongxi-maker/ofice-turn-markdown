@@ -81,6 +81,8 @@ def render_index(
     lines.extend([f"# {document.title}", "", f"源文件格式：`{document.format.upper()}`", ""])
     if output_format is OutputFormat.JSON:
         lines.append(f"- [转换结果](json/{output_name}.json)")
+    elif output_format is OutputFormat.HTML:
+        lines.append(f"- [转换结果](html/{output_name}.html)")
     elif document.format == "xlsx":
         lines.extend([f"- [转换内容](markdown/{output_name}.md)", "", "## 工作表", ""])
         for sheet_name in document.sheets:
